@@ -1,0 +1,5 @@
+go.work
+.vscode/
+
+*.env
+.env.local
