@@ -10,8 +10,8 @@ import (
 
 func main() {
 	config.LoadEnv()
-	db.ConnectDB()
+	db := db.ConnectDB()
 	e := echo.New()
-	handler.SetUpRouter(e)
+	handler.SetUpRouter(e, db)
 }
 

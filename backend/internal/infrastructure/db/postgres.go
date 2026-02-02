@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func ConnectDB() {
+func ConnectDB() *sql.DB{
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("POSTGRES_HOST"),
@@ -28,4 +28,5 @@ func ConnectDB() {
 	}
 
 	fmt.Println("Base de datos iniciada con exito")
+	return db
 }
