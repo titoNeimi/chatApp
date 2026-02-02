@@ -5,7 +5,6 @@ import (
 	"chatApp/internal/infrastructure/config"
 	"chatApp/internal/infrastructure/db"
 	"github.com/labstack/echo/v5"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -14,4 +13,3 @@ func main() {
 	e := echo.New()
 	handler.SetUpRouter(e, db)
 }
-

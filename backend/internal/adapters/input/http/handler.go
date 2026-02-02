@@ -3,7 +3,6 @@ package handler
 import (
 	"chatApp/internal/adapters/output/postgres"
 	"chatApp/internal/application"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"gorm.io/gorm"
 )
 
 type CustomValidator struct {
@@ -24,7 +24,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	return nil
 }
 
-func SetUpRouter(e *echo.Echo, db *sql.DB) {
+func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	e.Use(middleware.RequestLogger())
 
 	e.Validator = &CustomValidator{validator: validator.New()}

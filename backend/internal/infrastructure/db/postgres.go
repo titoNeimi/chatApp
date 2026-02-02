@@ -1,14 +1,16 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func ConnectDB() *sql.DB{
-	connStr := fmt.Sprintf(
+func ConnectDB() *gorm.DB {
+	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("POSTGRES_HOST"),
 		os.Getenv("POSTGRES_PORT"),
@@ -16,14 +18,17 @@ func ConnectDB() *sql.DB{
 		os.Getenv("POSTGRES_PASSWORD"),
 		os.Getenv("POSTGRES_DB"),
 	)
-	db, err := sql.Open("postgres", connStr)
 
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = db.Ping()
+	sqlDB, err := db.DB()
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := sqlDB.Ping(); err != nil {
 		log.Fatal(err)
 	}
 
