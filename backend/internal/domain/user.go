@@ -14,3 +14,4 @@ type User struct {
 	// BannedAt  *time.Time
 	// BanReason *string
 }
+

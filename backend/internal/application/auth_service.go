@@ -5,6 +5,7 @@ import (
 	"chatApp/internal/ports/output"
 	"chatApp/pkg/crypto"
 	"context"
+	"fmt"
 )
 
 type AuthService struct {
@@ -16,6 +17,17 @@ func NewAuthService(userRepo output.UserRepository) *AuthService {
 }
 
 func (s *AuthService) Register(ctx context.Context, email, username, password string) (*domain.User, error) {
+
+	exist, err := s.userRepo.ExistsByEmail(ctx, email)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if exist {
+		return nil, domain.ErrDuplicateEmail
+	}
+
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -30,5 +42,17 @@ func (s *AuthService) Register(ctx context.Context, email, username, password st
 }
 
 func (s *AuthService) Login(ctx context.Context, email, hashPassword string) (string, string, error) {
+	user, err := s.userRepo.FindByEmail(ctx, email)
+
+	if err != nil {
+		fmt.Println(err)
+		return "", "", err
+	}
+
+	if isValidPassword := crypto.ValidatePassword(hashPassword, user.Password_hash); !isValidPassword {
+		return "", "", domain.ErrInvalidCredentials
+	}
+
 	return "", "", nil
+
 }

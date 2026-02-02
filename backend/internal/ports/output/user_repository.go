@@ -10,4 +10,5 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	FindByID(ctx context.Context, id string) (*domain.User, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
+	GetAll(ctx context.Context) ([]domain.User, error)
 }

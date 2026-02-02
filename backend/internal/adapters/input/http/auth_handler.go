@@ -28,7 +28,6 @@ func (h *AuthHandler) Register(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-
 	user, err := h.authService.Register(c.Request().Context(), req.Email, req.Username, req.Password)
 	if err != nil {
 		switch err {
