@@ -8,4 +8,5 @@ var (
 	ErrWeakPassword       = errors.New("password too weak")
 	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidRole        = errors.New("invalid role")
 )

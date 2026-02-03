@@ -2,14 +2,23 @@ package domain
 
 import "time"
 
+const (
+	RoleUser  = "user"
+	RoleAdmin = "admin"
+)
+
+func IsValidRole(role string) bool {
+	return role == RoleUser || role == RoleAdmin
+}
+
 type User struct {
-	ID            string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	ID            string
 	Username      string
 	Email         string
-	Password_hash string    `gorm:"column:password_hash"`
+	Password_hash string
 	Role          string
-	CreatedAt     time.Time `gorm:"column:created_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	// Banned    bool
 	// BannedAt  *time.Time
 	// BanReason *string

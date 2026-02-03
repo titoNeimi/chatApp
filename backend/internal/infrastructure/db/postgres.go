@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 
+	"chatApp/internal/adapters/output/postgres/models"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -21,6 +23,10 @@ func ConnectDB() *gorm.DB {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := db.AutoMigrate(&models.User{}); err != nil {
 		log.Fatal(err)
 	}
 
