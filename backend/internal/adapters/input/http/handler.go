@@ -34,12 +34,20 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	})
 
 	userRepo := postgres.NewUserRepository(db)
+	serverRepo := postgres.NewServerRepo(db)
+	roomRepo := postgres.NewRoomRepo(db)
 
 	authService := application.NewAuthService(userRepo)
 	userService := application.NewUserService(userRepo)
+	serverService := application.NewServerService(serverRepo)
+	roomService := application.NewRoomService(roomRepo)
 
 	AuthHandler := NewAuthHandler(authService)
 	UserHandler := newUserHandler(userService)
+	serverHandler := NewServerHandler(serverService)
+	roomHandler := NewRoomHandler(roomService)
+
+	//todo: Terminar los CRUDS de todas las rutas, actualmente solo estan implementados los Create
 
 	users := e.Group("/users")
 	{
@@ -48,6 +56,22 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		users.PUT("/:id", UserHandler.Update)
 		users.DELETE("/:id", UserHandler.Delete)
 		users.PATCH("/:id/role", UserHandler.ChangeRole)
+	}
+
+	server := e.Group("/server")
+	{
+		server.POST("", serverHandler.Create)
+
+		room := server.Group("/:serverID/room")
+		{
+			room.POST("", roomHandler.CreateForServer)
+			room.GET("", roomHandler.ListByServer)
+		}
+	}
+
+	room := e.Group("/room") //Solo para DirectMessages
+	{
+		room.POST("", roomHandler.Create)
 	}
 
 	auth := e.Group("/auth")
