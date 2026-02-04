@@ -1,7 +1,9 @@
 package postgres
 
 import (
+	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
+
 	"gorm.io/gorm"
 )
 
@@ -14,7 +16,18 @@ func NewMessageRepo(db *gorm.DB) *messageRepo {
 }
 
 func (r *messageRepo) Create(message domain.Message) (domain.Message, error) {
-	panic("not implemented")
+	model := models.MessageFromDomain(&message)
+	if model == nil {
+		return domain.Message{}, nil
+	}
+	if err := r.db.Omit("ID").Create(model).Error; err != nil {
+		return domain.Message{}, err
+	}
+	created := model.ToDomain()
+	if created == nil {
+		return domain.Message{}, nil
+	}
+	return *created, nil
 }
 func (r *messageRepo) SoftDelete(messageID string) error {
 	panic("not implemented")

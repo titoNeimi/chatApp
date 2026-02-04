@@ -34,16 +34,19 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	})
 
 	userRepo := postgres.NewUserRepository(db)
+	messageRepo := postgres.NewMessageRepo(db)
 	serverRepo := postgres.NewServerRepo(db)
 	roomRepo := postgres.NewRoomRepo(db)
 
 	authService := application.NewAuthService(userRepo)
 	userService := application.NewUserService(userRepo)
+	messageService := application.NewMessageService(messageRepo)
 	serverService := application.NewServerService(serverRepo)
 	roomService := application.NewRoomService(roomRepo)
 
 	AuthHandler := NewAuthHandler(authService)
 	UserHandler := newUserHandler(userService)
+	messageHandler := newMessageHandler(messageService)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
 
@@ -72,6 +75,18 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	room := e.Group("/room") //Solo para DirectMessages
 	{
 		room.POST("", roomHandler.Create)
+	}
+
+	message := e.Group("/message")
+	{
+		message.POST("", messageHandler.Create)
+
+		message.PUT("/:messageID", messageHandler.UpdateContent)
+		message.GET("/:messageID", messageHandler.GetByID)
+		message.DELETE("/:messageID", messageHandler.SoftDelete)
+
+		message.GET("/room/:roomID", messageHandler.ListByRoomID)
+		message.GET("/user/:userID", messageHandler.ListByUserID)
 	}
 
 	auth := e.Group("/auth")
