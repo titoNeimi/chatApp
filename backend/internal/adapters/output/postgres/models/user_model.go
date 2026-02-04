@@ -6,9 +6,9 @@ import (
 )
 
 type User struct {
-	ID           string `gorm:"type:uuid;default:gen_random_uuid();primaryKey;not null"`
-	Username     string `gorm:"not null"`
-	Email        string    `gorm:"uniqueIndex;not null"`
+	ID           string    `gorm:"type:uuid;default:gen_random_uuid();primaryKey;not null"`
+	Username     string    `gorm:"unique;not null"`
+	Email        string    `gorm:"unique;not null"`
 	PasswordHash string    `gorm:"column:password_hash;not null"`
 	Role         string    `gorm:"default:user;check:role IN ('user','admin');not null"`
 	CreatedAt    time.Time `gorm:"column:created_at;not null"`
