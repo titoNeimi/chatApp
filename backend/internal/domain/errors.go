@@ -9,4 +9,7 @@ var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidRole        = errors.New("invalid role")
+	ErrInvalidID          = errors.New("invalid id")
+	ErrServerNotFound     = errors.New("server not found")
+	ErrRoomNotFound       = errors.New("room not found")
 )
