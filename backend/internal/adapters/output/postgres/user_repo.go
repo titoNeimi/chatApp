@@ -79,3 +79,14 @@ func (r *UserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 	}
 	return domainUsers, nil
 }
+
+func (r *UserRepository) ChangeRole(ctx context.Context, id, newRole string) error {
+	result := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Update("role", newRole)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}

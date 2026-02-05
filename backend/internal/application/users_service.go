@@ -22,7 +22,10 @@ func (s *UserService) Update(ctx context.Context, id string, updates dto.UpdateU
 	panic("not implemented")
 }
 func (s *UserService) ChangeRole(ctx context.Context, id, newRole string) error {
-	panic("not implemented")
+	if !domain.IsValidRole(newRole) {
+		return domain.ErrInvalidRole
+	}
+	return s.userRepo.ChangeRole(ctx, id, newRole)
 }
 func (s *UserService) GetAll(ctx context.Context) ([]domain.User, error) {
 	users, err := s.userRepo.GetAll(ctx)
@@ -32,5 +35,5 @@ func (s *UserService) GetAll(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 func (s *UserService) GetByID(ctx context.Context, id string) (*domain.User, error) {
-	panic("not implemented")
+	return s.userRepo.FindByID(ctx, id)
 }

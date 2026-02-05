@@ -1,4 +1,4 @@
-package valaidation
+package validation
 
 import (
 	"chatApp/internal/domain"

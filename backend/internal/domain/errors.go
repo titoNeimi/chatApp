@@ -12,4 +12,5 @@ var (
 	ErrInvalidID          = errors.New("invalid id")
 	ErrServerNotFound     = errors.New("server not found")
 	ErrRoomNotFound       = errors.New("room not found")
+	ErrMessageNotFound    = errors.New("message not found")
 )

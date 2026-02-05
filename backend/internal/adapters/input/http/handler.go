@@ -40,25 +40,23 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	authService := application.NewAuthService(userRepo)
 	userService := application.NewUserService(userRepo)
-	messageService := application.NewMessageService(messageRepo)
+	messageService := application.NewMessageService(messageRepo, roomRepo)
 	serverService := application.NewServerService(serverRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo)
 
 	AuthHandler := NewAuthHandler(authService)
 	UserHandler := newUserHandler(userService)
-	messageHandler := newMessageHandler(messageService)
+	messageHandler := newMessageHandler(messageService, roomService)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
-
-	//todo: Terminar los CRUDS de todas las rutas, actualmente solo estan implementados los Create
 
 	users := e.Group("/users")
 	{
 		users.GET("", UserHandler.GetAll)
-		users.GET("/:id", UserHandler.GetByID)
-		users.PUT("/:id", UserHandler.Update)
-		users.DELETE("/:id", UserHandler.Delete)
-		users.PATCH("/:id/role", UserHandler.ChangeRole)
+		users.GET("/:userID", UserHandler.GetByID)
+		users.PUT("/:userID", UserHandler.Update)
+		users.DELETE("/:userID", UserHandler.Delete)
+		users.PATCH("/:userID/role", UserHandler.ChangeRole)
 	}
 
 	server := e.Group("/server")
@@ -85,9 +83,9 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.PUT("/:roomID", roomHandler.Update)
 	}
 
-	// Rooms end‑to‑end: ListByServer, y rutas para /server/:serverID/room y /room.
-	// Messages: GetByID, ListByRoomID, ListByUserID, UpdateContent, SoftDelete (repo/service/handler).
-	// Users: GetByID, Update, Delete, ChangeRole.
+	// Rooms end‑to‑end: rutas para /server/:serverID/room y /room.
+	// Messages: ListByUserID
+	// Users: Update y  Delete.
 
 	message := e.Group("/message")
 	{

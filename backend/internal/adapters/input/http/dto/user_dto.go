@@ -1,11 +1,35 @@
 package dto
 
+import "time"
+
 type UpdateUserRequest struct {
-	Email    string `json:"email" validate:"email"`
-	Username string `json:"username" validate:"min=3"`
-	Password string `json:"password" validate:"min=8"`
+	Email    *string `json:"email,omitempty" validate:"omitempty,email"`
+	Username *string `json:"username,omitempty" validate:"omitempty,min=3"`
+	Password *string `json:"password,omitempty" validate:"omitempty,min=8"`
 }
 
-// type UpdateUserResponse struct {
-//Complete User
-// }
+type ChangeRoleRequest struct {
+	Role string `json:"role" validate:"required,oneof=user admin"`
+}
+
+type UserResponse struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type UpdateUserResponse struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type UserListResponse struct {
+	Users []UserResponse `json:"users"`
+}

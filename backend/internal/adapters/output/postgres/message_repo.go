@@ -3,6 +3,8 @@ package postgres
 import (
 	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
+	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -33,14 +35,46 @@ func (r *messageRepo) SoftDelete(messageID string) error {
 	panic("not implemented")
 }
 func (r *messageRepo) UpdateContent(messageID, newContent string) error {
-	panic("not implemented")
+
+	result := r.db.Model(&models.Message{}).Where("id = ?", messageID).Updates(map[string]interface{}{
+		"content":    newContent,
+		"updated_at": time.Now().UTC(),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return domain.ErrMessageNotFound
+	}
+
+	return nil
 }
 func (r *messageRepo) ListByRoomID(roomID string) ([]domain.Message, error) {
-	panic("not implemented")
+	var messages []models.Message
+
+	if err := r.db.Find(&messages, "room_id = ?", roomID).Error; err != nil {
+		return nil, err
+	}
+
+	messageDomain := make([]domain.Message, 0, len(messages))
+	for _, mess := range messages {
+		messageDomain = append(messageDomain, *mess.ToDomain())
+	}
+
+	return messageDomain, nil
 }
 func (r *messageRepo) ListByUserID(userID string) ([]domain.Message, error) {
 	panic("not implemented")
 }
 func (r *messageRepo) GetByID(messageID string) (domain.Message, error) {
-	panic("not implemented")
+	var message models.Message
+
+	if err := r.db.First(&message, "id = ?", messageID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.Message{}, domain.ErrMessageNotFound
+		}
+		return domain.Message{}, err
+	}
+	return *message.ToDomain(), nil
 }
