@@ -3,6 +3,7 @@ package postgres
 import (
 	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -29,11 +30,29 @@ func (r *RoomRepo) Create(room domain.Room) (domain.Room, error) {
 	}
 	return *created, nil
 }
-func (r *RoomRepo) Update(room domain.Room) (domain.Room, error) {
-	panic("not implemented")
+func (r *RoomRepo) Update(roomID string, updates map[string]interface{}) (domain.Room, error) {
+	if len(updates) == 0 {
+		return r.GetByID(roomID)
+	}
+
+	if err := r.db.Model(&models.Room{}).Where("id = ?", roomID).Updates(updates).Error; err != nil {
+		return domain.Room{}, err
+	}
+
+	return r.GetByID(roomID)
 }
 func (r *RoomRepo) GetByID(roomID string) (domain.Room, error) {
-	panic("not implemented")
+	var model models.Room
+
+	if err := r.db.First(&model, "id = ?", roomID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.Room{}, domain.ErrRoomNotFound
+		}
+		return domain.Room{}, err
+	}
+
+	return *model.ToDomain(), nil
+
 }
 func (r *RoomRepo) SoftDelete(roomID string) error {
 	panic("not implemented")

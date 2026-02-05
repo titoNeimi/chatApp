@@ -63,19 +63,30 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	server := e.Group("/server")
 	{
+		server.GET("", serverHandler.GetAll)
 		server.POST("", serverHandler.Create)
+		server.GET("/:serverID", serverHandler.GetServerByID)
+		server.PUT("/:serverID", serverHandler.Update)
+		server.DELETE("/:serverID", serverHandler.SoftDelete)
 
 		room := server.Group("/:serverID/room")
 		{
 			room.POST("", roomHandler.CreateForServer)
 			room.GET("", roomHandler.ListByServer)
+			room.PUT("/:roomID", roomHandler.UpdateInServer)
 		}
 	}
 
 	room := e.Group("/room") //Solo para DirectMessages
 	{
 		room.POST("", roomHandler.Create)
+		room.GET("/:roomID", roomHandler.GetByID)
+		room.PUT("/:roomID", roomHandler.Update)
 	}
+
+	// Rooms end‑to‑end: SoftDelete, ListByServer, y rutas para /server/:serverID/room y /room.
+	// Messages: GetByID, ListByRoomID, ListByUserID, UpdateContent, SoftDelete (repo/service/handler).
+	// Users: GetByID, Update, Delete, ChangeRole.
 
 	message := e.Group("/message")
 	{
