@@ -7,4 +7,5 @@ type RoomRepository interface {
 	Update(roomID string, updates map[string]interface{}) (domain.Room, error)
 	GetByID(roomID string) (domain.Room, error)
 	SoftDelete(roomID string) error
+	ListByServer(serverID string) ([]domain.Room, error)
 }

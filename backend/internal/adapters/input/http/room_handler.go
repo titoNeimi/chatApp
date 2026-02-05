@@ -5,8 +5,8 @@ import (
 	valaidation "chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
+	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v5"
 )
@@ -20,14 +20,33 @@ func NewRoomHandler(roomService input.RoomService) *RoomHandler {
 }
 
 func (h *RoomHandler) Create(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusInternalServerError, "not implemented")
+	var roomData dto.RoomCreateRequest
+	if err := c.Bind(&roomData); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := c.Validate(&roomData); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	room := domain.Room{
+		Type:        domain.DIRECT_MESSAGE,
+		Name:        roomData.Name,
+		Description: roomData.Description,
+	}
+
+	newRoom, err := h.RoomService.Create(room)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusCreated, newRoom)
 }
 func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 
 	serverID := c.Param("serverID")
 
-	if strings.TrimSpace(serverID) == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "serverID invalido")
+	if err := valaidation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	var roomData dto.RoomCreateRequest
@@ -49,7 +68,12 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 
 	newRoom, err := h.RoomService.CreateForServer(room)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		switch err {
+		case domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
 	}
 	return c.JSON(http.StatusCreated, newRoom)
 }
@@ -107,10 +131,40 @@ func (h *RoomHandler) GetByID(c *echo.Context) error {
 }
 
 func (h *RoomHandler) SoftDelete(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusInternalServerError, "not implemented")
+	roomID := c.Param("roomID")
+	if err := valaidation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.RoomService.SoftDelete(roomID); err != nil {
+		switch err {
+		case domain.ErrRoomNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.JSON(http.StatusOK, fmt.Sprintf("roomID= %s has been softDeleted", roomID))
 }
 func (h *RoomHandler) ListByServer(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusInternalServerError, "not implemented")
+	serverID := c.Param("serverID")
+	if err := valaidation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	rooms, err := h.RoomService.ListByServer(serverID)
+
+	if err != nil {
+		switch err {
+		case domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.JSON(http.StatusOK, rooms)
 }
 func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
@@ -140,6 +194,8 @@ func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 	room, err := h.RoomService.UpdateInServer(serverID, roomID, updates)
 	if err != nil {
 		switch err {
+		case domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		case domain.ErrRoomNotFound:
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		default:
@@ -150,5 +206,27 @@ func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 	return c.JSON(http.StatusOK, room)
 }
 func (h *RoomHandler) SoftDeleteInServer(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusInternalServerError, "not implemented")
+	serverID := c.Param("serverID")
+	if err := valaidation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	roomID := c.Param("roomID")
+	if err := valaidation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	err := h.RoomService.SoftDeleteInServer(roomID, serverID)
+
+	if err != nil {
+		switch err {
+		case domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		case domain.ErrRoomNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+	return c.JSON(http.StatusOK, fmt.Sprintf("roomID= %s with serverID = %s has been softDeleted", roomID, serverID))
 }
