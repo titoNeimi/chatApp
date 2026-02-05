@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@theme {
+  --color-deepNavy: #0a0e17;
+  --color-surfaceNavy: #121826;
+  --color-electricPurple: #8b5cf6;
+  --color-purpleGlow: rgba(139, 92, 246, 0.3);
+  --color-textHigh: #ffffff;
+  --color-textMed: #94a3b8;
+}
