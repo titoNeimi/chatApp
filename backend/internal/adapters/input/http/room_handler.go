@@ -164,7 +164,22 @@ func (h *RoomHandler) ListByServer(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, rooms)
+	returnData := make([]dto.RoomResponse, 0, len(rooms))
+	for _, roomData := range rooms {
+		newData := dto.RoomResponse{
+			ID:          roomData.ID,
+			Description: roomData.Description,
+			CreatedAt:   roomData.CreatedAt,
+			UpdatedAt:   roomData.UpdatedAt,
+			Type:        roomData.Type,
+			ServerID:    roomData.ServerID,
+			DeletedAt:   &roomData.DeletedAt.Time,
+			Name:        roomData.Name,
+		}
+		returnData = append(returnData, newData)
+	}
+
+	return c.JSON(http.StatusOK, returnData)
 }
 func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
@@ -229,4 +244,50 @@ func (h *RoomHandler) SoftDeleteInServer(c *echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, fmt.Sprintf("roomID= %s with serverID = %s has been softDeleted", roomID, serverID))
+}
+
+func (h *RoomHandler) AddUserToRoom(c *echo.Context) error {
+	roomID := c.Param("roomID")
+	if err := valaidation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID := c.Param("userID")
+	if err := valaidation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.RoomService.AddUserToRoom(roomID, userID); err != nil {
+		switch err {
+		case domain.ErrRoomNotFound, domain.ErrUserNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.JSON(http.StatusCreated, fmt.Sprintf("userID= %s added to roomID= %s", userID, roomID))
+}
+
+func (h *RoomHandler) RemoveUserFromRoom(c *echo.Context) error {
+	roomID := c.Param("roomID")
+	if err := valaidation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID := c.Param("userID")
+	if err := valaidation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.RoomService.RemoveUserFromRoom(roomID, userID); err != nil {
+		switch err {
+		case domain.ErrRoomNotFound, domain.ErrUserNotFound, domain.ErrRoomMembershipNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.JSON(http.StatusOK, fmt.Sprintf("userID= %s removed from roomID= %s", userID, roomID))
 }

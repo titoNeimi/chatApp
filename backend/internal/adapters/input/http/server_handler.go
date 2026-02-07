@@ -7,6 +7,7 @@ import (
 	"chatApp/internal/ports/input"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v5"
 )
@@ -25,7 +26,21 @@ func (h *serverHandler) GetAll(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, servers)
+	return c.JSON(http.StatusOK, buildServerResponseList(servers))
+}
+
+func (h *serverHandler) ListByUserID(c *echo.Context) error {
+	userID := c.Param("userID")
+	if err := valaidation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	servers, err := h.serverService.ListByUserID(userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, buildServerResponseList(servers))
 }
 
 func (h *serverHandler) Create(c *echo.Context) error {
@@ -127,4 +142,26 @@ func (h *serverHandler) GetServerByID(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, server)
 
+}
+
+func buildServerResponseList(servers []domain.Server) []dto.ServerResponse {
+	serverList := make([]dto.ServerResponse, 0, len(servers))
+	for _, serverData := range servers {
+		var deletedAt *time.Time
+		if serverData.DeletedAt.Valid {
+			deletedAt = &serverData.DeletedAt.Time
+		}
+
+		serverList = append(serverList, dto.ServerResponse{
+			ID:          serverData.ID,
+			Name:        serverData.Name,
+			Description: serverData.Description,
+			RoomIDs:     serverData.RoomIDs,
+			CreatedAt:   serverData.CreatedAt,
+			UpdatedAt:   serverData.UpdatedAt,
+			DeletedAt:   deletedAt,
+		})
+	}
+
+	return serverList
 }

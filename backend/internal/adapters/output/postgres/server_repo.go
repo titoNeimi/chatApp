@@ -35,6 +35,32 @@ func (r *serverRepo) GetAll() ([]domain.Server, error) {
 	return servers, nil
 }
 
+func (r *serverRepo) ListByUserID(userID string) ([]domain.Server, error) {
+	var model []models.Server
+
+	if err := r.db.
+		Model(&models.Server{}).
+		Preload("Rooms").
+		Joins("JOIN rooms ON rooms.server_id = servers.id AND rooms.deleted_at IS NULL").
+		Joins("JOIN room_users ON room_users.room_id = rooms.id AND room_users.deleted_at IS NULL").
+		Where("rooms.server_id IS NOT NULL").
+		Where("room_users.user_id = ?", userID).
+		Distinct().
+		Find(&model).Error; err != nil {
+		return nil, err
+	}
+
+	servers := make([]domain.Server, 0, len(model))
+	for i := range model {
+		server := model[i].ToDomain()
+		if server != nil {
+			servers = append(servers, *server)
+		}
+	}
+
+	return servers, nil
+}
+
 func (r *serverRepo) Create(server domain.Server) (domain.Server, error) {
 	model := models.ServerFromDomain(&server)
 	if model == nil {

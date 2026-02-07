@@ -38,6 +38,9 @@ func ConnectDB() *gorm.DB {
 	if err := db.AutoMigrate(&models.Message{}); err != nil {
 		log.Fatal(err)
 	}
+	if err := db.AutoMigrate(&models.RoomUsers{}); err != nil {
+		log.Fatal(err)
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {

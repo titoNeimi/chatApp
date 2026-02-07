@@ -17,6 +17,10 @@ func (s *serverService) GetAll() ([]domain.Server, error) {
 	return s.serverRepo.GetAll()
 }
 
+func (s *serverService) ListByUserID(userID string) ([]domain.Server, error) {
+	return s.serverRepo.ListByUserID(userID)
+}
+
 func (s *serverService) Create(server domain.Server) (domain.Server, error) {
 	return s.serverRepo.Create(server)
 }

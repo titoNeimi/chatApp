@@ -5,6 +5,7 @@ import (
 	"chatApp/internal/domain"
 	"errors"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -82,4 +83,54 @@ func (r *RoomRepo) ListByServer(serverID string) ([]domain.Room, error) {
 	}
 
 	return domainRooms, nil
+}
+
+func (r *RoomRepo) AddUserToRoom(roomID, userID string) error {
+	var roomUser models.RoomUsers
+	err := r.db.Unscoped().
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		First(&roomUser).Error
+
+	if err == nil {
+		if !roomUser.DeletedAt.Valid {
+			return nil
+		}
+
+		return r.db.Unscoped().
+			Model(&models.RoomUsers{}).
+			Where("id = ?", roomUser.ID).
+			Updates(map[string]interface{}{
+				"deleted_at":           nil,
+				"last_read_message_id": nil,
+				"is_muted":             false,
+				"permissions":          datatypes.JSON([]byte("{}")),
+			}).Error
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	newMembership := models.RoomUsers{
+		RoomID:      roomID,
+		UserID:      userID,
+		Permissions: datatypes.JSON([]byte("{}")),
+	}
+
+	return r.db.Create(&newMembership).Error
+}
+
+func (r *RoomRepo) RemoveUserFromRoom(roomID, userID string) error {
+	result := r.db.
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		Delete(&models.RoomUsers{})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return domain.ErrRoomMembershipNotFound
+	}
+
+	return nil
 }

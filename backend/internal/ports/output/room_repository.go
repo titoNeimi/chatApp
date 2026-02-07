@@ -8,4 +8,6 @@ type RoomRepository interface {
 	GetByID(roomID string) (domain.Room, error)
 	SoftDelete(roomID string) error
 	ListByServer(serverID string) ([]domain.Room, error)
+	AddUserToRoom(roomID, userID string) error
+	RemoveUserFromRoom(roomID, userID string) error
 }

@@ -42,7 +42,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	userService := application.NewUserService(userRepo)
 	messageService := application.NewMessageService(messageRepo, roomRepo)
 	serverService := application.NewServerService(serverRepo)
-	roomService := application.NewRoomService(roomRepo, serverRepo)
+	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 
 	AuthHandler := NewAuthHandler(authService)
 	UserHandler := newUserHandler(userService)
@@ -53,6 +53,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	users := e.Group("/users")
 	{
 		users.GET("", UserHandler.GetAll)
+		users.GET("/:userID/servers", serverHandler.ListByUserID)
 		users.GET("/:userID", UserHandler.GetByID)
 		users.PUT("/:userID", UserHandler.Update)
 		users.DELETE("/:userID", UserHandler.Delete)
@@ -81,6 +82,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.POST("", roomHandler.Create)
 		room.GET("/:roomID", roomHandler.GetByID)
 		room.PUT("/:roomID", roomHandler.Update)
+		room.POST("/:roomID/users/:userID", roomHandler.AddUserToRoom)
+		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom)
 	}
 
 	// Rooms end‑to‑end: rutas para /server/:serverID/room y /room.

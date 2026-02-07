@@ -11,4 +11,6 @@ type RoomService interface {
 	SoftDelete(roomID string) error
 	SoftDeleteInServer(roomID, serverID string) error
 	ListByServer(serverID string) ([]domain.Room, error)
+	AddUserToRoom(roomID, userID string) error
+	RemoveUserFromRoom(roomID, userID string) error
 }

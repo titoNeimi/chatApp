@@ -3,17 +3,20 @@ package application
 import (
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/output"
+	"context"
 )
 
 type RoomService struct {
 	RoomRepo   output.RoomRepository
 	ServerRepo output.ServerRepository
+	UserRepo   output.UserRepository
 }
 
-func NewRoomService(roomRepo output.RoomRepository, serverRepo output.ServerRepository) *RoomService {
+func NewRoomService(roomRepo output.RoomRepository, serverRepo output.ServerRepository, userRepo output.UserRepository) *RoomService {
 	return &RoomService{
 		RoomRepo:   roomRepo,
 		ServerRepo: serverRepo,
+		UserRepo:   userRepo,
 	}
 }
 
@@ -83,4 +86,28 @@ func (s *RoomService) ListByServer(serverID string) ([]domain.Room, error) {
 	}
 
 	return servers, nil
+}
+
+func (s *RoomService) AddUserToRoom(roomID, userID string) error {
+	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+		return err
+	}
+
+	if _, err := s.UserRepo.FindByID(context.Background(), userID); err != nil {
+		return err
+	}
+
+	return s.RoomRepo.AddUserToRoom(roomID, userID)
+}
+
+func (s *RoomService) RemoveUserFromRoom(roomID, userID string) error {
+	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+		return err
+	}
+
+	if _, err := s.UserRepo.FindByID(context.Background(), userID); err != nil {
+		return err
+	}
+
+	return s.RoomRepo.RemoveUserFromRoom(roomID, userID)
 }
