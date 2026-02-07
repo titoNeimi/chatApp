@@ -6,14 +6,16 @@ export const metadata: Metadata = {
   description: "A simple real time chat application built with Next.js and go",
 };
 
-export default function RootLayout({
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen bg-[#0b0f1a] text-slate-100 flex flex-col">
         {children}
       </body>
     </html>
