@@ -1,8 +1,10 @@
 package handler
 
 import (
+	jwtAdapter "chatApp/internal/adapters/output/jwt"
 	"chatApp/internal/adapters/output/postgres"
 	"chatApp/internal/application"
+	"chatApp/internal/infrastructure/config"
 	"fmt"
 	"net/http"
 	"os"
@@ -34,23 +36,33 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	})
 
 	userRepo := postgres.NewUserRepository(db)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
 	messageRepo := postgres.NewMessageRepo(db)
 	serverRepo := postgres.NewServerRepo(db)
 	roomRepo := postgres.NewRoomRepo(db)
 
-	authService := application.NewAuthService(userRepo)
+	authConfig, err := config.LoadAuthConfigFromEnv()
+	if err != nil {
+		e.Logger.Error("failed to load auth config", "error", err)
+		return
+	}
+	tokenProvider := jwtAdapter.NewTokenProvider(authConfig)
+
+	authService := application.NewAuthService(userRepo, refreshTokenRepo, tokenProvider)
 	userService := application.NewUserService(userRepo)
 	messageService := application.NewMessageService(messageRepo, roomRepo)
 	serverService := application.NewServerService(serverRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 
-	AuthHandler := NewAuthHandler(authService)
+	authMiddleware := RequireAuth(authService)
+
+	AuthHandler := NewAuthHandler(authService, userService)
 	UserHandler := newUserHandler(userService)
 	messageHandler := newMessageHandler(messageService, roomService)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
 
-	users := e.Group("/users")
+	users := e.Group("/users", authMiddleware)
 	{
 		users.GET("", UserHandler.GetAll)
 		users.GET("/:userID/servers", serverHandler.ListByUserID)
@@ -60,7 +72,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		users.PATCH("/:userID/role", UserHandler.ChangeRole)
 	}
 
-	server := e.Group("/server")
+	server := e.Group("/server", authMiddleware)
 	{
 		server.GET("", serverHandler.GetAll)
 		server.POST("", serverHandler.Create)
@@ -77,7 +89,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		}
 	}
 
-	room := e.Group("/room") //Solo para DirectMessages
+	room := e.Group("/room", authMiddleware) //Solo para DirectMessages
 	{
 		room.POST("", roomHandler.Create)
 		room.GET("/:roomID", roomHandler.GetByID)
@@ -86,7 +98,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom)
 	}
 
-	message := e.Group("/message")
+	message := e.Group("/message", authMiddleware)
 	{
 		message.POST("", messageHandler.Create)
 
@@ -102,6 +114,13 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	{
 		auth.POST("/register", AuthHandler.Register)
 		auth.POST("/login", AuthHandler.Login)
+		auth.POST("/refresh", AuthHandler.Refresh)
+		auth.POST("/logout", AuthHandler.Logout)
+	}
+
+	authPrivate := e.Group("/auth", authMiddleware)
+	{
+		authPrivate.GET("/me", AuthHandler.Me)
 	}
 
 	if err := e.Start(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))); err != nil {

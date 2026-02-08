@@ -46,9 +46,14 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 		}
 	}
 
+	userID, err := GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
 	message, err := h.messageService.Create(input.CreateMessageInput{
 		Content:          data.Content,
-		UserID:           data.UserID, //todo: Hacer que venga desde el auth y no del body
+		UserID:           userID,
 		ReplyToMessageID: data.ReplyToMessageID,
 		RoomID:           data.RoomID,
 	})

@@ -4,7 +4,6 @@ import "time"
 
 type MessageCreateRequest struct {
 	Content          string  `json:"content" validate:"required,min=1,max=240"`
-	UserID           string  `json:"user_id" validate:"required"`
 	ReplyToMessageID *string `json:"reply_to_message_id,omitempty"`
 	RoomID           string  `json:"room_id" validate:"required"`
 }
@@ -38,4 +37,3 @@ type MessageResponse struct {
 type MessageListResponse struct {
 	Messages []MessageResponse `json:"messages"`
 }
-
