@@ -2,12 +2,13 @@
 
 import { Room } from "@/types/room";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
-export function RoomGallery(params: {rooms?: Room[], selectedRoomID: string | null, handleSelectedRoom: (roomID: string) => void}) { 
+export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: string | null, serverID: string}) { 
   const [collapsed, setCollapsed] = useState(false);
 
-  const {rooms, selectedRoomID, handleSelectedRoom} = params
+  const {rooms, selectedRoomID, serverID} = params
 
   return ( 
     <aside 
@@ -34,27 +35,26 @@ export function RoomGallery(params: {rooms?: Room[], selectedRoomID: string | nu
       </div> 
 
       {rooms && rooms.map((room) => ( 
-        <RoomButton key={room.id} selected={selectedRoomID == room.id} room={room} handleSelectedRoom={handleSelectedRoom}/> 
+        <RoomButton key={room.id} selected={selectedRoomID == room.id} room={room} serverID={serverID}/> 
       ))}
 
       {!rooms && (<div>
-        <h2>No rooms available</h2>
+        <h2 className={collapsed ? "hidden" : ""}>No rooms available</h2>
       </div>)}
     </aside> 
   ); 
 } 
 
-function RoomButton(params: { selected: boolean; room: Room, handleSelectedRoom: (roomID: string) => void}) { 
-  const { selected, room, handleSelectedRoom } = params; 
+function RoomButton(params: { selected: boolean; room: Room, serverID: string}) { 
+  const { selected, room, serverID } = params; 
   return ( 
-    <div 
+    <Link href={`/${serverID}/${room.id}`} 
       title={room.name}
       className={`flex h-32 w-full flex-col gap-2 rounded-2xl border p-4 text-left transition duration-200 ${ 
         selected 
           ? "border-purple-400/40 bg-purple-500/10 shadow-lg shadow-purple-500/20" 
           : "border-white/10 bg-white/5 hover:-translate-y-0.5 hover:border-purple-400/40 hover:bg-white/10 hover:shadow-lg hover:shadow-black/40" 
       } cursor-pointer group-data-[collapsed=true]:items-center group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-0`} 
-      onClick={() => handleSelectedRoom(room.id)}
     > 
       <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-purple-200 shadow-md shadow-purple-500/20 shrink-0"> 
         <Calendar className="h-5 w-5" /> 
@@ -65,6 +65,6 @@ function RoomButton(params: { selected: boolean; room: Room, handleSelectedRoom:
           <p className="text-xs leading-relaxed italic text-slate-400 overflow-hidden text-ellipsis line-clamp-2">{room.description}</p> 
         )} 
       </div>
-    </div> 
-  ); 
+    </Link> 
+  )
 }
