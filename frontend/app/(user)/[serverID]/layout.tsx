@@ -80,8 +80,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     return (
       <>
         <Topbar servers={servers} />
-        <div className="flex min-h-screen items-center justify-center">
-          <p className="text-slate-400">Loading...</p>
+        <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(1200px_circle_at_top_left,var(--color-purpleGlow)_0%,transparent_40%),linear-gradient(180deg,var(--color-deepNavy)_0%,var(--color-surfaceNavy)_100%)]">
+          <p className="text-textMed">Loading...</p>
         </div>
       </>
     )
@@ -91,7 +91,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     return (
       <>
         <Topbar servers={servers} />
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(1200px_circle_at_top_left,var(--color-purpleGlow)_0%,transparent_40%),linear-gradient(180deg,var(--color-deepNavy)_0%,var(--color-surfaceNavy)_100%)]">
           <p className="text-red-500">{error}</p>
         </div>
       </>
@@ -101,7 +101,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <>
       <Topbar servers={servers} />
-      <div className="flex flex-1 gap-10 bg-[radial-gradient(1200px_circle_at_top,#151a2b_0%,#0b0f1a_55%,#090c14_100%)] px-6 py-8 overflow-hidden">
+      <div className="flex flex-1 gap-6 overflow-hidden bg-[radial-gradient(1200px_circle_at_top_left,var(--color-purpleGlow)_0%,transparent_40%),linear-gradient(180deg,var(--color-deepNavy)_0%,var(--color-surfaceNavy)_100%)] px-5 py-6 transition-colors">
         <RoomGallery rooms={rooms} serverID={serverID} selectedRoomID={roomID}/> 
         {children}
       </div>

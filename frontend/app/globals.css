@@ -7,4 +7,6 @@
   --color-purpleGlow: rgba(139, 92, 246, 0.3);
   --color-textHigh: #ffffff;
   --color-textMed: #94a3b8;
+  --color-softBorder: rgba(148, 163, 184, 0.22);
+  --color-panelShadow: rgba(2, 6, 23, 0.35);
 }
