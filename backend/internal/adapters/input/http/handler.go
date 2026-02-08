@@ -86,10 +86,6 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom)
 	}
 
-	// Rooms end‑to‑end: rutas para /server/:serverID/room y /room.
-	// Messages: ListByUserID
-	// Users: Update y  Delete.
-
 	message := e.Group("/message")
 	{
 		message.POST("", messageHandler.Create)
