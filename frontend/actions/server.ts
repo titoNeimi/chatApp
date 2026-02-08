@@ -1,15 +1,8 @@
-'use server'
-
 import { Server } from "@/types/server";
 
-export async function listUserServers(userID: string): Promise<Server[]> {
+export async function listUserServers(): Promise<Server[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_APIURL;
-    if (!apiUrl) {
-      return [];
-    }
-
-    const result = await fetch(`${apiUrl}/users/${userID}/servers`, {
+    const result = await fetch(`/api/users/me/servers`, {
       cache: "no-store",
     });
 

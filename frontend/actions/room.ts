@@ -1,11 +1,8 @@
-'use server'
-
 import { Room } from "@/types/room";
 
 export async function listServerRooms(serverID: string): Promise<Room[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_APIURL
-    const result = await fetch(`${apiUrl}/server/${serverID}/room`)
+    const result = await fetch(`/api/servers/${serverID}/rooms`, { cache: "no-store" })
 
     if (!result.ok) {
       return []

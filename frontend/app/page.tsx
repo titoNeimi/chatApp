@@ -8,7 +8,7 @@ export default function Home() {
       <p>A simple real time chat application built with Next.js and Go.</p>
       <div className="flex gap-5">
         <Link href={"/login"} className={`${buttonClass} border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white`}>Log in</Link>
-        <Link href={"/signup"} className={`${buttonClass} bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600`}>Sign up</Link>
+        <Link href={"/register"} className={`${buttonClass} bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600`}>Sign up</Link>
       </div>
     </section>
   );

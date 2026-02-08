@@ -1,10 +1,9 @@
 'use client'
 
-import { listServerRooms } from "@/actions/room";
 import { RoomGallery } from "@/components/roomGallery";
 import { Room } from "@/types/room";
 import { Server } from "@/types/server";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Topbar } from "@/components/topbar";
 
@@ -15,7 +14,7 @@ type RouteParams = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const MOCKED_USER_ID = "b0758b39-3817-4f2b-838f-bee2e91660f6";
+  const router = useRouter();
   const params = useParams<RouteParams>();
   const serverID = useMemo(() => {
     const value = params?.serverID;
@@ -36,13 +35,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   useEffect(() => {
     const fetchUserServers = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_APIURL
-        if (!apiUrl) {
-          setServers([])
+        const result = await fetch('/api/users/me/servers', { cache: 'no-store' })
+        if (result.status === 401) {
+          router.push('/login')
           return
         }
-
-        const result = await fetch(`${apiUrl}/users/${MOCKED_USER_ID}/servers`)
         if (!result.ok) {
           setServers([])
           return
@@ -57,14 +54,23 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     }
 
     fetchUserServers()
-  }, [])
+  }, [router])
   
   useEffect(() => {
     setLoading(true)
     const fetchRoomFromServer = async () => {
       try {
         if (!serverID) return
-        const rooms = await listServerRooms(serverID)
+        const result = await fetch(`/api/servers/${serverID}/rooms`, { cache: 'no-store' })
+        if (result.status === 401) {
+          router.push('/login')
+          return
+        }
+        if (!result.ok) {
+          setRooms([])
+          return
+        }
+        const rooms: Room[] = await result.json()
         if (!rooms[0]) return
         setRooms(rooms)
       } catch (error) {
@@ -74,7 +80,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       }
     }
     fetchRoomFromServer()
-  }, [serverID])
+  }, [router, serverID])
   
   if (loading) {
     return (

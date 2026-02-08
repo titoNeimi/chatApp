@@ -1,3 +1,5 @@
+'use client'
+
 import { User } from "@/types/user"
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 
@@ -18,7 +20,7 @@ export function UserProvider({ children }:{ children: ReactNode }) {
   async function refresh(): Promise<void>{
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/me')
+      const res = await fetch('/api/auth/me', { cache: 'no-store' })
       if(!res.ok){
         setUser(null)
         return
@@ -38,7 +40,7 @@ export function UserProvider({ children }:{ children: ReactNode }) {
   }, [])
 
   async function logout() {
-    await fetch('api/auth/logout')
+    await fetch('/api/auth/logout', { method: 'POST' })
     setUser(null)
   }
 
