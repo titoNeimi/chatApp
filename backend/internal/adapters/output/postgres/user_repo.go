@@ -65,6 +65,18 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain
 	}
 	return user.ToDomain(), nil
 }
+
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
+	var user models.User
+	if err := r.db.WithContext(ctx).First(&user, "username = ?", username).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return user.ToDomain(), nil
+}
+
 func (r *UserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 	var users []models.User
 	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
@@ -89,4 +101,44 @@ func (r *UserRepository) ChangeRole(ctx context.Context, id, newRole string) err
 		return domain.ErrUserNotFound
 	}
 	return nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id string) error {
+	var model models.User
+	result := r.db.WithContext(ctx).Delete(&model, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, id string, updates map[string]interface{}) (*domain.User, error) {
+	result := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Updates(updates)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		var count int64
+		if err := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Count(&count).Error; err != nil {
+			return nil, err
+		}
+		if count == 0 {
+			return nil, domain.ErrUserNotFound
+		}
+	}
+
+	var model models.User
+	if err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return model.ToDomain(), nil
 }

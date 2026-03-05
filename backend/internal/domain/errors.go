@@ -4,9 +4,12 @@ import "errors"
 
 var (
 	ErrDuplicateEmail         = errors.New("email already exists")
+	ErrDuplicateUsername      = errors.New("username already exists")
 	ErrInvalidEmail           = errors.New("invalid email format")
+	ErrInvalidUsername        = errors.New("invalid username")
 	ErrWeakPassword           = errors.New("password too weak")
 	ErrUserNotFound           = errors.New("user not found")
+	ErrNoFieldsToUpdate       = errors.New("no fields to update")
 	ErrInvalidCredentials     = errors.New("invalid credentials")
 	ErrInvalidToken           = errors.New("invalid token")
 	ErrExpiredToken           = errors.New("expired token")

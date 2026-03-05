@@ -21,10 +21,67 @@ func newUserHandler(userService input.UserService) *UserHandler {
 }
 
 func (h *UserHandler) Delete(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusNotImplemented, "not implemented")
+	userID := c.Param("userID")
+	if err := validation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.userService.Delete(c.Request().Context(), userID); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, fmt.Sprintf("user with the id = %s has been softDeleted", userID))
 }
 func (h *UserHandler) Update(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusNotImplemented, "not implemented")
+	userID := c.Param("userID")
+	if err := validation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	var updateData dto.UpdateUserRequest
+	if err := c.Bind(&updateData); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	if err := c.Validate(&updateData); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	updates := buildUpdatesFromDTO(updateData)
+	if len(updates) == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, domain.ErrNoFieldsToUpdate.Error())
+	}
+
+	user, err := h.userService.Update(c.Request().Context(), userID, updates)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		case errors.Is(err, domain.ErrNoFieldsToUpdate),
+			errors.Is(err, domain.ErrInvalidEmail),
+			errors.Is(err, domain.ErrInvalidUsername),
+			errors.Is(err, domain.ErrWeakPassword):
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		case errors.Is(err, domain.ErrDuplicateEmail),
+			errors.Is(err, domain.ErrDuplicateUsername):
+			return echo.NewHTTPError(http.StatusConflict, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	response := dto.UpdateUserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Role:      user.Role,
+	}
+	return c.JSON(http.StatusOK, response)
 }
 func (h *UserHandler) ChangeRole(c *echo.Context) error {
 

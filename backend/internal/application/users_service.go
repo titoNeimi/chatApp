@@ -1,9 +1,9 @@
 package application
 
 import (
-	"chatApp/internal/adapters/input/http/dto"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/output"
+	cryptopkg "chatApp/pkg/crypto"
 	"context"
 )
 
@@ -16,10 +16,71 @@ func NewUserService(userRepo output.UserRepository) *UserService {
 }
 
 func (s *UserService) Delete(ctx context.Context, id string) error {
-	panic("not implemented")
+	return s.userRepo.Delete(ctx, id)
 }
-func (s *UserService) Update(ctx context.Context, id string, updates dto.UpdateUserRequest) (*domain.User, error) {
-	panic("not implemented")
+func (s *UserService) Update(ctx context.Context, id string, updates map[string]interface{}) (*domain.User, error) {
+	if len(updates) == 0 {
+		return nil, domain.ErrNoFieldsToUpdate
+	}
+
+	currentUser, err := s.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	processedUpdates := make(map[string]interface{})
+	for field, value := range updates {
+		switch field {
+		case "email":
+			email, ok := value.(string)
+			if !ok || email == "" {
+				return nil, domain.ErrInvalidEmail
+			}
+			if email == currentUser.Email {
+				continue
+			}
+			existingUser, err := s.userRepo.FindByEmail(ctx, email)
+			if err != nil && err != domain.ErrUserNotFound {
+				return nil, err
+			}
+			if existingUser != nil && existingUser.ID != id {
+				return nil, domain.ErrDuplicateEmail
+			}
+			processedUpdates["email"] = email
+		case "username":
+			username, ok := value.(string)
+			if !ok || username == "" {
+				return nil, domain.ErrInvalidUsername
+			}
+			if username == currentUser.Username {
+				continue
+			}
+			existingUser, err := s.userRepo.FindByUsername(ctx, username)
+			if err != nil && err != domain.ErrUserNotFound {
+				return nil, err
+			}
+			if existingUser != nil && existingUser.ID != id {
+				return nil, domain.ErrDuplicateUsername
+			}
+			processedUpdates["username"] = username
+		case "password":
+			password, ok := value.(string)
+			if !ok || len(password) < 8 {
+				return nil, domain.ErrWeakPassword
+			}
+			hashedPassword, err := cryptopkg.HashPassword(password)
+			if err != nil {
+				return nil, err
+			}
+			processedUpdates["password_hash"] = hashedPassword
+		}
+	}
+
+	if len(processedUpdates) == 0 {
+		return nil, domain.ErrNoFieldsToUpdate
+	}
+
+	return s.userRepo.Update(ctx, id, processedUpdates)
 }
 func (s *UserService) ChangeRole(ctx context.Context, id, newRole string) error {
 	if !domain.IsValidRole(newRole) {
