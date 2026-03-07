@@ -1,7 +1,63 @@
+'use client'
 import { Paperclip, SendHorizontal, Smile } from "lucide-react";
-import { mockedMessages, mockedUsers } from "@/lib/mockData";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+
+type Message = {
+  ID: string;
+  Content: string;
+  UserID: string;
+  ReplyToMessageID: string | null;
+  RoomID: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+};
 
 export default function RoomDashboardPlaceholder() {
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+
+  const params = useParams<{ serverID: string, roomID: string }>();
+
+  const serverID = params?.serverID || "";
+  const roomID = params?.roomID || "";
+
+  useEffect(() => {
+    if (!serverID || !roomID) return;
+
+    const fetchMessages = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/servers/${serverID}/rooms/${roomID}/messages`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch messages: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log("Fetched messages:", data);
+        setMessages(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [serverID, roomID]);
+
+  if (!serverID || !roomID) {
+    return (
+      <div className="flex h-[calc(100dvh-8.5rem)] min-h-120 w-full items-center justify-center rounded-2xl bg-surfaceNavy p-4 shadow-[0_20px_40px_var(--color-panelShadow)] sm:p-5">
+        <p className="text-sm text-textMed">serverID and roomID are required</p>
+      </div>
+    );
+  }
+  
+
+
   return (
     <section className="relative flex h-[calc(100dvh-8.5rem)] min-h-120 w-full min-w-0 flex-1 overflow-hidden">
       <div className="relative flex h-full min-h-0 w-full flex-col rounded-2xl bg-surfaceNavy p-4 shadow-[0_20px_40px_var(--color-panelShadow)] sm:p-5">
@@ -14,71 +70,38 @@ export default function RoomDashboardPlaceholder() {
         </header>
 
         <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
-          {mockedMessages.map((message) => {
-            const author = mockedUsers[message.userID];
-            const isCurrentUser = author.id === "user-kris";
+          {isLoading && (
+            <p className="text-center text-sm text-textMed">Loading messages...</p>
+          )}
+          {error && (
+            <p className="text-center text-sm text-red-400">{error}</p>
+          )}
+          {!isLoading && !error && messages && messages.length === 0 && (
+            <p className="text-center text-sm text-textMed">No messages yet. Be the first to send one!</p>
+          )}
+          {messages && messages.map((message) => (
+            <article
+              key={message.ID}
+              className="flex w-full items-end gap-2 justify-start sm:gap-3"
+            >
+              <HexAvatar initials={message.UserID.slice(0, 2).toUpperCase()} />
 
-            return (
-              <article
-                key={message.id}
-                className={`flex w-full items-end gap-2 sm:gap-3 ${
-                  isCurrentUser ? "justify-end" : "justify-start"
-                }`}
-              >
-                {!isCurrentUser && (
-                  <HexAvatar initials={author.initials} tone={author.avatarTone} />
-                )}
-
-                <div
-                  className={`flex max-w-[92%] flex-col gap-2 sm:max-w-[80%] ${
-                    isCurrentUser ? "items-end" : "items-start"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 text-xs">
-                    {!isCurrentUser && (
-                      <span className="font-semibold text-textHigh">
-                        {author.handle}
-                      </span>
-                    )}
-                    <span className="text-textMed">{message.timeUTC}</span>
-                    {isCurrentUser && (
-                      <span className="font-semibold text-electricPurple">
-                        {author.handle}
-                      </span>
-                    )}
-                  </div>
-
-                  {message.type === "text" && (
-                    <p
-                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm sm:text-base ${
-                        isCurrentUser
-                          ? "bg-electricPurple text-white"
-                          : "bg-deepNavy text-textHigh"
-                      }`}
-                    >
-                      {message.content}
-                    </p>
-                  )}
-
-                  {message.type === "attachment" && (
-                    <div className="w-full max-w-105 rounded-2xl bg-[#c8b79d]/90 p-3 shadow-sm">
-                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[linear-gradient(140deg,#cdbb9f_0%,#8f836f_100%)]">
-                        <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#68735d]/70" />
-                        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#a8abae]/80" />
-                        <div className="absolute bottom-3 right-3 text-[10px] font-semibold tracking-wide text-[#ece7db]">
-                          {message.fileName}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+              <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-textHigh">
+                    {message.UserID.slice(0, 8)}
+                  </span>
+                  <span className="text-textMed">
+                    {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
                 </div>
 
-                {isCurrentUser && (
-                  <HexAvatar initials={author.initials} tone={author.avatarTone} />
-                )}
-              </article>
-            );
-          })}
+                <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
+                  {message.Content}
+                </p>
+              </div>
+            </article>
+          ))}
         </div>
 
         <footer className="mt-4">
@@ -93,8 +116,8 @@ export default function RoomDashboardPlaceholder() {
 
             <input
               type="text"
-              value=""
-              readOnly
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
               placeholder="Transmit data to #main-frame..."
               className="min-w-0 flex-1 bg-transparent text-sm text-textHigh outline-none placeholder:text-textMed sm:text-base"
             />
@@ -121,8 +144,8 @@ export default function RoomDashboardPlaceholder() {
   );
 }
 
-function HexAvatar(params: { initials: string; tone: string }) {
-  const { initials, tone } = params;
+function HexAvatar(params: { initials: string; tone?: string }) {
+  const { initials, tone = "bg-electricPurple" } = params;
 
   return (
     <span className="relative flex h-10 w-10 shrink-0 items-center justify-center text-sm font-semibold text-white">
