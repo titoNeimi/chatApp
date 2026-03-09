@@ -3,11 +3,10 @@ package postgres
 import (
 	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
-	"encoding/json"
 	"errors"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type RoomRepo struct {
@@ -103,8 +102,6 @@ func (r *RoomRepo) AddUserToRoom(roomID, userID string) error {
 			Updates(map[string]interface{}{
 				"deleted_at":           nil,
 				"last_read_message_id": nil,
-				"is_muted":             false,
-				"permissions":          datatypes.JSON([]byte("{}")),
 			}).Error
 	}
 
@@ -113,9 +110,8 @@ func (r *RoomRepo) AddUserToRoom(roomID, userID string) error {
 	}
 
 	newMembership := models.RoomUsers{
-		RoomID:      roomID,
-		UserID:      userID,
-		Permissions: datatypes.JSON([]byte("{}")),
+		RoomID: roomID,
+		UserID: userID,
 	}
 
 	return r.db.Create(&newMembership).Error
@@ -181,9 +177,18 @@ func (r *RoomRepo) GetMyMembership(roomID, userID string) (domain.MyRoomMembersh
 
 	return domain.MyRoomMembership{
 		UserID:            roomUser.UserID,
-		Permissions:       json.RawMessage(roomUser.Permissions),
-		IsMuted:           roomUser.IsMuted,
 		LastReadMessageID: roomUser.LastReadMessageID,
 	}, nil
 
+}
+
+func (r *RoomRepo) AddUsersToRoom(roomID string, userIDs []string) error {
+    if len(userIDs) == 0 {
+        return nil
+    }
+    records := make([]models.RoomUsers, len(userIDs))
+    for i, uid := range userIDs {
+        records[i] = models.RoomUsers{RoomID: roomID, UserID: uid}
+    }
+    return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&records).Error
 }

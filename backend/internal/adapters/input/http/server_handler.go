@@ -55,12 +55,18 @@ func (h *serverHandler) Create(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	userID, err := GetAuthenticatedUserID(c)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
 	server := domain.Server{
 		Name:        serverData.Name,
 		Description: serverData.Description,
 	}
 
-	server, err = h.serverService.Create(server)
+	server, err = h.serverService.Create(server, userID)
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -142,6 +148,29 @@ func (h *serverHandler) GetServerByID(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, server)
 
+}
+
+func (h *serverHandler) JoinServer(c *echo.Context) error {
+	serverID := c.Param("serverID")
+	if err := valaidation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID, err := GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := h.serverService.JoinServer(serverID, userID); err != nil {
+		switch err {
+		case domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 func buildServerResponseList(servers []domain.Server) []dto.ServerResponse {

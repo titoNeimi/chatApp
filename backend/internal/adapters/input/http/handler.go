@@ -53,7 +53,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	authService := application.NewAuthService(userRepo, refreshTokenRepo, tokenProvider)
 	userService := application.NewUserService(userRepo)
 	messageService := application.NewMessageService(messageRepo, roomRepo)
-	serverService := application.NewServerService(serverRepo)
+	serverService := application.NewServerService(serverRepo, roomRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 
 	authMiddleware := RequireAuth(authService)
@@ -87,6 +87,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		server.GET("/:serverID", serverHandler.GetServerByID, userOrAdmin)
 		server.PUT("/:serverID", serverHandler.Update, adminOnly)
 		server.DELETE("/:serverID", serverHandler.SoftDelete, adminOnly)
+		server.POST("/:serverID/join", serverHandler.JoinServer, userOrAdmin)
 
 		room := server.Group("/:serverID/room")
 		{

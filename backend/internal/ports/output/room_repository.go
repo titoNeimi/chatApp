@@ -13,4 +13,5 @@ type RoomRepository interface {
 	ListMembersByRoom(roomID string) ([]domain.RoomMember, error)
 	GetMyMembership(roomID, userID string) (domain.MyRoomMembership, error)
 	UpdateLastRead(roomID, userID, messageID string) error
+	AddUsersToRoom(roomID string, userIDs []string) error
 }

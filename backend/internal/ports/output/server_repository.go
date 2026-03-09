@@ -9,4 +9,7 @@ type ServerRepository interface {
 	Update(serverID string, updates map[string]interface{}) (domain.Server, error)
 	SoftDelete(serverID string) error
 	GetServerByID(serverId string) (domain.Server, error)
+	ListUsersByServer(serverID string) ([]domain.User, error)
+	ListPublicRoomsByServer(serverID string) ([]domain.Room, error)
+	AddUserToServer(serverID, userID string) error
 }

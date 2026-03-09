@@ -41,7 +41,19 @@ func (s *RoomService) CreateForServer(room domain.Room) (domain.Room, error) {
 	if _, err := s.ServerRepo.GetServerByID(*room.ServerID); err != nil {
 		return domain.Room{}, err
 	}
-	return s.RoomRepo.Create(room)
+	created, err := s.RoomRepo.Create(room)
+	if err != nil {
+		return domain.Room{}, err
+	}
+	if !created.IsPrivate {
+		users, _ := s.ServerRepo.ListUsersByServer(*room.ServerID)
+		userIDs := make([]string, len(users))
+		for i, u := range users {
+			userIDs[i] = u.ID
+		}
+		_ = s.RoomRepo.AddUsersToRoom(created.ID, userIDs)
+	}
+	return created, nil
 }
 func (s *RoomService) UpdateInServer(serverID, roomID string, updates map[string]interface{}) (domain.Room, error) {
 	if _, err := s.ServerRepo.GetServerByID(serverID); err != nil {
@@ -89,7 +101,8 @@ func (s *RoomService) ListByServer(serverID string) ([]domain.Room, error) {
 }
 
 func (s *RoomService) AddUserToRoom(roomID, userID string) error {
-	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+	room, err := s.RoomRepo.GetByID(roomID)
+	if err != nil {
 		return err
 	}
 
@@ -97,7 +110,15 @@ func (s *RoomService) AddUserToRoom(roomID, userID string) error {
 		return err
 	}
 
-	return s.RoomRepo.AddUserToRoom(roomID, userID)
+	if err := s.RoomRepo.AddUserToRoom(roomID, userID); err != nil {
+		return err
+	}
+
+	if room.ServerID != nil {
+		_ = s.ServerRepo.AddUserToServer(*room.ServerID, userID)
+	}
+
+	return nil
 }
 
 func (s *RoomService) RemoveUserFromRoom(roomID, userID string) error {

@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type serverRepo struct {
@@ -41,11 +42,8 @@ func (r *serverRepo) ListByUserID(userID string) ([]domain.Server, error) {
 	if err := r.db.
 		Model(&models.Server{}).
 		Preload("Rooms").
-		Joins("JOIN rooms ON rooms.server_id = servers.id AND rooms.deleted_at IS NULL").
-		Joins("JOIN room_users ON room_users.room_id = rooms.id AND room_users.deleted_at IS NULL").
-		Where("rooms.server_id IS NOT NULL").
-		Where("room_users.user_id = ?", userID).
-		Distinct().
+		Joins("JOIN server_users ON server_users.server_id = servers.id").
+		Where("server_users.user_id = ?", userID).
 		Find(&model).Error; err != nil {
 		return nil, err
 	}
@@ -112,4 +110,46 @@ func (r *serverRepo) GetServerByID(serverId string) (domain.Server, error) {
 		return domain.Server{}, nil
 	}
 	return *created, nil
+}
+
+func (r *serverRepo) ListUsersByServer(serverID string) ([]domain.User, error) {
+	var users []models.User
+
+	err := r.db.Model(&models.User{}).
+		Joins("JOIN server_users ON server_users.user_id = users.id").
+		Where("server_users.server_id = ?", serverID).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.User, 0, len(users))
+	for i := range users {
+		if u := users[i].ToDomain(); u != nil {
+			result = append(result, *u)
+		}
+	}
+	return result, nil
+}
+
+func (r *serverRepo) ListPublicRoomsByServer(serverID string) ([]domain.Room, error) {
+	var rooms []models.Room
+
+	err := r.db.Where("server_id = ? AND is_private = false", serverID).Find(&rooms).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.Room, 0, len(rooms))
+	for i := range rooms {
+		if room := rooms[i].ToDomain(); room != nil {
+			result = append(result, *room)
+		}
+	}
+	return result, nil
+}
+
+func (r *serverRepo) AddUserToServer(serverID, userID string) error {
+	return r.db.Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&models.ServerUsers{ServerID: serverID, UserID: userID}).Error
 }
