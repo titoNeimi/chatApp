@@ -1,7 +1,8 @@
 'use client'
 import { Paperclip, SendHorizontal, Smile } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
 
 type Message = {
   ID: string;
@@ -24,6 +25,31 @@ export default function RoomDashboardPlaceholder() {
 
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
+
+  const handleEvent = useCallback((event: RoomEvent) => {
+    if (event.type === "message.new") {
+      setMessages((prev) => [...prev, event.payload])
+    } else if (event.type === "message.update") {
+      setMessages((prev) => prev.map(m =>
+        m.ID === event.payload.ID ? { ...m, Content: event.payload.Content } : m
+      ))
+    } else if (event.type === "message.delete") {
+      setMessages((prev) => prev.filter(m => m.ID !== event.payload.ID))
+    }
+  }, [])
+
+  useRoomSocket(roomID, handleEvent)
+
+  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!messageInput.trim()) return
+    await fetch(`/api/servers/${serverID}/rooms/${roomID}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: messageInput }),
+    })
+    setMessageInput("")
+  }
 
   useEffect(() => {
     if (!serverID || !roomID) return;
@@ -105,7 +131,7 @@ export default function RoomDashboardPlaceholder() {
         </div>
 
         <footer className="mt-4">
-          <form className="flex items-center gap-2 rounded-2xl bg-deepNavy p-2 sm:p-3">
+          <form onSubmit={handleSend} className="flex items-center gap-2 rounded-2xl bg-deepNavy p-2 sm:p-3">
             <button
               type="button"
               className="rounded-lg p-2 text-textMed transition hover:bg-surfaceNavy hover:text-textHigh"
