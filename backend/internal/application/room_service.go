@@ -111,3 +111,25 @@ func (s *RoomService) RemoveUserFromRoom(roomID, userID string) error {
 
 	return s.RoomRepo.RemoveUserFromRoom(roomID, userID)
 }
+
+func (s *RoomService) ListMembersByRoom(roomID string) ([]domain.RoomMember, error) {
+	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+		return nil, err
+	}
+
+	return s.RoomRepo.ListMembersByRoom(roomID)
+}
+func (s *RoomService) GetMyMembership(roomID, userID string) (domain.MyRoomMembership, error) {
+	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+		return domain.MyRoomMembership{}, err
+	}
+
+	return s.RoomRepo.GetMyMembership(roomID, userID)
+}
+func (s *RoomService) UpdateLastRead(roomID, userID, messageID string) error {
+	if _, err := s.RoomRepo.GetByID(roomID); err != nil {
+		return err
+	}
+
+	return s.RoomRepo.UpdateLastRead(roomID, userID, messageID)
+}

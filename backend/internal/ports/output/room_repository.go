@@ -10,4 +10,7 @@ type RoomRepository interface {
 	ListByServer(serverID string) ([]domain.Room, error)
 	AddUserToRoom(roomID, userID string) error
 	RemoveUserFromRoom(roomID, userID string) error
+	ListMembersByRoom(roomID string) ([]domain.RoomMember, error)
+	GetMyMembership(roomID, userID string) (domain.MyRoomMembership, error)
+	UpdateLastRead(roomID, userID, messageID string) error
 }

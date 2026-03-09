@@ -3,6 +3,7 @@ package postgres
 import (
 	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
+	"encoding/json"
 	"errors"
 
 	"gorm.io/datatypes"
@@ -133,4 +134,56 @@ func (r *RoomRepo) RemoveUserFromRoom(roomID, userID string) error {
 	}
 
 	return nil
+}
+
+func (r *RoomRepo) ListMembersByRoom(roomID string) ([]domain.RoomMember, error) {
+	if _, err := r.GetByID(roomID); err != nil {
+		return nil, err
+	}
+
+	var members []domain.RoomMember
+	if err := r.db.Model(&models.RoomUsers{}).
+		Joins("JOIN users ON users.id = room_users.user_id").
+		Select("room_users.user_id, users.username").
+		Where("room_users.room_id = ? AND room_users.deleted_at IS NULL", roomID).
+		Scan(&members).Error; err != nil {
+		return nil, err
+	}
+
+	return members, nil
+}
+
+func (r *RoomRepo) UpdateLastRead(roomID, userID, messageID string) error {
+	result := r.db.Model(&models.RoomUsers{}).
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		UpdateColumn("last_read_message_id", messageID)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrRoomMembershipNotFound
+	}
+	return nil
+}
+
+func (r *RoomRepo) GetMyMembership(roomID, userID string) (domain.MyRoomMembership, error) {
+	var roomUser models.RoomUsers
+
+	result := r.db.Where("user_id = ? AND room_id = ?", userID, roomID).First(&roomUser)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return domain.MyRoomMembership{}, domain.ErrRoomMembershipNotFound
+		}
+		return domain.MyRoomMembership{}, result.Error
+	}
+
+	return domain.MyRoomMembership{
+		UserID:            roomUser.UserID,
+		Permissions:       json.RawMessage(roomUser.Permissions),
+		IsMuted:           roomUser.IsMuted,
+		LastReadMessageID: roomUser.LastReadMessageID,
+	}, nil
+
 }
