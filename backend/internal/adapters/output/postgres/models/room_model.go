@@ -14,6 +14,7 @@ type Room struct {
 	Type        string         `gorm:"check:type IN ('direct_message','server');not null"`
 	ServerID    *string        `gorm:"type:uuid;index"`
 	Server      *Server        `gorm:"foreignKey:ServerID;references:ID"`
+	IsPrivate   bool           `gorm:"default:false"`
 	CreatedAt   time.Time      `gorm:"column:created_at;not null"`
 	UpdatedAt   time.Time      `gorm:"column:updated_at;not null"`
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
@@ -34,6 +35,7 @@ func RoomFromDomain(room *domain.Room) *Room {
 		Description: room.Description,
 		Type:        room.Type,
 		ServerID:    room.ServerID,
+		IsPrivate:   room.IsPrivate,
 		CreatedAt:   room.CreatedAt,
 		UpdatedAt:   room.UpdatedAt,
 		DeletedAt:   room.DeletedAt,
@@ -50,6 +52,7 @@ func (r *Room) ToDomain() *domain.Room {
 		Description: r.Description,
 		Type:        r.Type,
 		ServerID:    r.ServerID,
+		IsPrivate:   r.IsPrivate,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 		DeletedAt:   r.DeletedAt,

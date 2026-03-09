@@ -12,6 +12,7 @@ type Room struct {
 	Description *string
 	Type        string
 	ServerID    *string
+	IsPrivate   bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt

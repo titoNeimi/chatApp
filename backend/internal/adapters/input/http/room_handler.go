@@ -64,6 +64,7 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 		Type:        domain.SERVER,
 		Name:        roomData.Name,
 		Description: roomData.Description,
+		IsPrivate:   roomData.IsPrivate,
 	}
 
 	newRoom, err := h.RoomService.CreateForServer(room)
@@ -173,6 +174,7 @@ func (h *RoomHandler) ListByServer(c *echo.Context) error {
 			UpdatedAt:   roomData.UpdatedAt,
 			Type:        roomData.Type,
 			ServerID:    roomData.ServerID,
+			IsPrivate:   roomData.IsPrivate,
 			DeletedAt:   &roomData.DeletedAt.Time,
 			Name:        roomData.Name,
 		}

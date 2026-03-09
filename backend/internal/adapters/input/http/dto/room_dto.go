@@ -5,6 +5,7 @@ import "time"
 type RoomCreateRequest struct {
 	Name        string  `json:"name" validate:"required,min=3"`
 	Description *string `json:"description,omitempty"`
+	IsPrivate   bool    `json:"is_private"`
 }
 
 type RoomUpdateRequest struct {
@@ -18,6 +19,7 @@ type RoomCreateResponse struct {
 	Description *string    `json:"description,omitempty"`
 	Type        string     `json:"type"`
 	ServerID    *string    `json:"server_id,omitempty"`
+	IsPrivate   bool       `json:"is_private"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
@@ -29,6 +31,7 @@ type RoomUpdateResponse struct {
 	Description *string    `json:"description,omitempty"`
 	Type        string     `json:"type"`
 	ServerID    *string    `json:"server_id,omitempty"`
+	IsPrivate   bool       `json:"is_private"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
@@ -40,6 +43,7 @@ type RoomResponse struct {
 	Description *string    `json:"description,omitempty"`
 	Type        string     `json:"type"`
 	ServerID    *string    `json:"server_id,omitempty"`
+	IsPrivate   bool       `json:"is_private"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
