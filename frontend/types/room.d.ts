@@ -4,6 +4,7 @@ export type Room = {
   description?: string
   type: RoomType
   server_id: string
+  is_private: boolean
   created_at: Date
   updated_at: Date
   deleted_at?: Date
