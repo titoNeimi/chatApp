@@ -22,4 +22,5 @@ var (
 	ErrRoomNotFound           = errors.New("room not found")
 	ErrMessageNotFound        = errors.New("message not found")
 	ErrRoomMembershipNotFound = errors.New("room membership not found")
+	ErrForbidden              = errors.New("forbidden")
 )

@@ -82,6 +82,28 @@ func (h *MessageHandler) SoftDelete(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	userID, err := GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
+	role, err := GetAuthenticatedUserRole(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
+	message, err := h.messageService.GetByID(messageID)
+	if err != nil {
+		if errors.Is(err, domain.ErrMessageNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if message.UserID != userID && role != domain.RoleAdmin {
+		return echo.NewHTTPError(http.StatusForbidden, domain.ErrForbidden.Error())
+	}
+
 	if err := h.messageService.SoftDelete(messageID); err != nil {
 		if errors.Is(err, domain.ErrMessageNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
@@ -97,6 +119,11 @@ func (h *MessageHandler) UpdateContent(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	userID, err := GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
 	var newContent dto.UpdateContentRequest
 
 	if err := c.Bind(&newContent); err != nil {
@@ -105,6 +132,18 @@ func (h *MessageHandler) UpdateContent(c *echo.Context) error {
 
 	if err := c.Validate(&newContent); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	message, err := h.messageService.GetByID(messageID)
+	if err != nil {
+		if errors.Is(err, domain.ErrMessageNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if message.UserID != userID {
+		return echo.NewHTTPError(http.StatusForbidden, domain.ErrForbidden.Error())
 	}
 
 	if err := h.messageService.UpdateContent(messageID, newContent.Content); err != nil {

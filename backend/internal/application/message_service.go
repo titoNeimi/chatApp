@@ -31,7 +31,7 @@ func (s *MessageService) Create(cmd input.CreateMessageInput) (domain.Message, e
 	return s.messageRepo.Create(message)
 }
 func (s *MessageService) SoftDelete(messageID string) error {
-	panic("Not implemented")
+	return s.messageRepo.SoftDelete(messageID)
 }
 func (s *MessageService) UpdateContent(messageID, newContent string) error {
 	return s.messageRepo.UpdateContent(messageID, newContent)

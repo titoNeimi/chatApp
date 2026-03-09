@@ -32,7 +32,17 @@ func (r *messageRepo) Create(message domain.Message) (domain.Message, error) {
 	return *created, nil
 }
 func (r *messageRepo) SoftDelete(messageID string) error {
-	panic("not implemented")
+	result := r.db.Where("id = ?", messageID).Delete(&models.Message{})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return domain.ErrMessageNotFound
+	}
+
+	return nil
 }
 func (r *messageRepo) UpdateContent(messageID, newContent string) error {
 
@@ -53,7 +63,7 @@ func (r *messageRepo) UpdateContent(messageID, newContent string) error {
 func (r *messageRepo) ListByRoomID(roomID string) ([]domain.Message, error) {
 	var messages []models.Message
 
-	if err := r.db.Find(&messages, "room_id = ?", roomID).Error; err != nil {
+	if err := r.db.Where("room_id = ?", roomID).Order("created_at ASC").Find(&messages).Error; err != nil {
 		return nil, err
 	}
 
