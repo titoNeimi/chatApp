@@ -3,8 +3,10 @@ package handler
 import (
 	"chatApp/internal/adapters/input/http/dto"
 	"chatApp/internal/adapters/input/http/validation"
+	"chatApp/internal/adapters/input/websockets"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,12 +17,14 @@ import (
 type MessageHandler struct {
 	messageService input.MessageService
 	roomService    input.RoomService
+	wsRegistry     *websockets.HubRegistry
 }
 
-func newMessageHandler(messageService input.MessageService, roomService input.RoomService) *MessageHandler {
+func newMessageHandler(messageService input.MessageService, roomService input.RoomService, wsRegistry *websockets.HubRegistry) *MessageHandler {
 	return &MessageHandler{
 		messageService: messageService,
 		roomService:    roomService,
+		wsRegistry:     wsRegistry,
 	}
 }
 
@@ -60,6 +64,15 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+
+	payload, err := json.Marshal(websockets.Event{
+		Type: websockets.EventMessageNew,
+		Payload: message,
+	})
+	if err == nil {
+		h.wsRegistry.Broadcast(message.RoomID, payload)
+	}
+
 	return c.JSON(http.StatusCreated, message)
 }
 

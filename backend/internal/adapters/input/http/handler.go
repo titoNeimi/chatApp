@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"chatApp/internal/adapters/input/websockets"
 	jwtAdapter "chatApp/internal/adapters/output/jwt"
 	"chatApp/internal/adapters/output/postgres"
 	"chatApp/internal/application"
@@ -48,6 +49,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		return
 	}
 	tokenProvider := jwtAdapter.NewTokenProvider(authConfig)
+	wsRegistry := websockets.NewHubRegistry()
 
 	authService := application.NewAuthService(userRepo, refreshTokenRepo, tokenProvider)
 	userService := application.NewUserService(userRepo)
@@ -61,9 +63,13 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	AuthHandler := NewAuthHandler(authService, userService)
 	UserHandler := newUserHandler(userService)
-	messageHandler := newMessageHandler(messageService, roomService)
+	messageHandler := newMessageHandler(messageService, roomService, wsRegistry)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
+	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
+
+
+	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
 	users := e.Group("/users", authMiddleware)
 	{
@@ -99,7 +105,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.PUT("/:roomID", roomHandler.Update, userOrAdmin)
 		room.POST("/:roomID/users/:userID", roomHandler.AddUserToRoom, RequireSelfOrAdmin("userID"))
 		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom, RequireSelfOrAdmin("userID"))
-		
+
 		room.GET("/:roomID/users", roomHandler.ListMembersByRoom, userOrAdmin)
 		room.GET("/:roomID/me", roomHandler.GetMyMembership)
 		room.PUT("/:roomID/read", roomHandler.UpdateLastRead)
