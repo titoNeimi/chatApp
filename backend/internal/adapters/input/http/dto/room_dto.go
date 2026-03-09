@@ -48,3 +48,7 @@ type RoomResponse struct {
 type RoomListResponse struct {
 	Rooms []RoomResponse `json:"rooms"`
 }
+
+type UpdateLastReadRequest struct {
+	MessageID string `json:"message_id" validate:"required,uuid"`
+}

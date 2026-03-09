@@ -92,13 +92,17 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		}
 	}
 
-	room := e.Group("/room", authMiddleware) //Solo para DirectMessages
+	room := e.Group("/room", authMiddleware)
 	{
 		room.POST("", roomHandler.Create, userOrAdmin)
 		room.GET("/:roomID", roomHandler.GetByID, userOrAdmin)
 		room.PUT("/:roomID", roomHandler.Update, userOrAdmin)
 		room.POST("/:roomID/users/:userID", roomHandler.AddUserToRoom, RequireSelfOrAdmin("userID"))
 		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom, RequireSelfOrAdmin("userID"))
+		
+		room.GET("/:roomID/users", roomHandler.ListMembersByRoom, userOrAdmin)
+		room.GET("/:roomID/me", roomHandler.GetMyMembership)
+		room.PUT("/:roomID/read", roomHandler.UpdateLastRead)
 	}
 
 	message := e.Group("/message", authMiddleware)

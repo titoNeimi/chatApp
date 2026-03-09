@@ -2,7 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
-	valaidation "chatApp/internal/adapters/input/http/validation"
+	"chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
 	"fmt"
@@ -45,7 +45,7 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 
 	serverID := c.Param("serverID")
 
-	if err := valaidation.IsValidID(serverID); err != nil {
+	if err := validation.IsValidID(serverID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -79,7 +79,7 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 }
 func (h *RoomHandler) Update(c *echo.Context) error {
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -112,7 +112,7 @@ func (h *RoomHandler) Update(c *echo.Context) error {
 func (h *RoomHandler) GetByID(c *echo.Context) error {
 
 	id := c.Param("roomID")
-	if err := valaidation.IsValidID(id); err != nil {
+	if err := validation.IsValidID(id); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -132,7 +132,7 @@ func (h *RoomHandler) GetByID(c *echo.Context) error {
 
 func (h *RoomHandler) SoftDelete(c *echo.Context) error {
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -149,7 +149,7 @@ func (h *RoomHandler) SoftDelete(c *echo.Context) error {
 }
 func (h *RoomHandler) ListByServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
-	if err := valaidation.IsValidID(serverID); err != nil {
+	if err := validation.IsValidID(serverID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -183,12 +183,12 @@ func (h *RoomHandler) ListByServer(c *echo.Context) error {
 }
 func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
-	if err := valaidation.IsValidID(serverID); err != nil {
+	if err := validation.IsValidID(serverID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -222,12 +222,12 @@ func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 }
 func (h *RoomHandler) SoftDeleteInServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
-	if err := valaidation.IsValidID(serverID); err != nil {
+	if err := validation.IsValidID(serverID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -248,12 +248,12 @@ func (h *RoomHandler) SoftDeleteInServer(c *echo.Context) error {
 
 func (h *RoomHandler) AddUserToRoom(c *echo.Context) error {
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	userID := c.Param("userID")
-	if err := valaidation.IsValidID(userID); err != nil {
+	if err := validation.IsValidID(userID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -271,12 +271,12 @@ func (h *RoomHandler) AddUserToRoom(c *echo.Context) error {
 
 func (h *RoomHandler) RemoveUserFromRoom(c *echo.Context) error {
 	roomID := c.Param("roomID")
-	if err := valaidation.IsValidID(roomID); err != nil {
+	if err := validation.IsValidID(roomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	userID := c.Param("userID")
-	if err := valaidation.IsValidID(userID); err != nil {
+	if err := validation.IsValidID(userID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -290,4 +290,80 @@ func (h *RoomHandler) RemoveUserFromRoom(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, fmt.Sprintf("userID= %s removed from roomID= %s", userID, roomID))
+}
+
+func (h *RoomHandler) ListMembersByRoom(c *echo.Context) error {
+	roomID := c.Param("roomID")
+	if err := validation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	roomMembers, err := h.RoomService.ListMembersByRoom(roomID)
+
+	if err != nil {
+		switch err {
+		case domain.ErrRoomNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.JSON(http.StatusOK, roomMembers)
+}
+
+func (h *RoomHandler) GetMyMembership(c *echo.Context) error {
+	roomID := c.Param("roomID")
+	if err := validation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID, err := GetAuthenticatedUserID(c)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	userData, err := h.RoomService.GetMyMembership(roomID, userID)
+	if err != nil {
+		switch err {
+		case domain.ErrRoomMembershipNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+	
+	return c.JSON(http.StatusOK, userData)
+}
+
+func (h *RoomHandler) UpdateLastRead(c *echo.Context) error {
+	roomID := c.Param("roomID")
+	if err := validation.IsValidID(roomID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	var body dto.UpdateLastReadRequest
+	if err := c.Bind(&body); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(&body); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID, err := GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := h.RoomService.UpdateLastRead(roomID, userID, body.MessageID); err != nil {
+		switch err {
+		case domain.ErrRoomMembershipNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
