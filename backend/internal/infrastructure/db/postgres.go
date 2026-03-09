@@ -44,6 +44,18 @@ func ConnectDB() *gorm.DB {
 	if err := db.AutoMigrate(&models.RefreshToken{}); err != nil {
 		log.Fatal(err)
 	}
+	if err := db.AutoMigrate(&models.ServerUsers{}); err != nil {
+		log.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.ServerRoles{}); err != nil {
+		log.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.ServerUserRoles{}); err != nil {
+		log.Fatal(err)
+	}
+	if err := db.AutoMigrate(&models.RoomPermissionOverrides{}); err != nil {
+		log.Fatal(err)
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
