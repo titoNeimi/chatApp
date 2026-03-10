@@ -1,7 +1,14 @@
-export default function Dashboard() {
+'use client'
 
-  return ( 
-    <section className="min-h-screen bg-[#0b0f1a] text-slate-100 flex flex-col">
+import { Server } from "@/types/server";
+import { useState } from "react";
+
+export default function Dashboard() {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [servers, setServers] = useState<Server[]>([])
+  return (
+    <section className="flex flex-1 flex-col text-textHigh">
       
     </section> 
   ); 
