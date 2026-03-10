@@ -28,7 +28,7 @@ export default function RoomDashboardPlaceholder() {
 
   const handleEvent = useCallback((event: RoomEvent) => {
     if (event.type === "message.new") {
-      setMessages((prev) => [...prev, event.payload])
+      setMessages((prev) => prev.some(m => m.ID === event.payload.ID) ? prev : [...prev, event.payload])
     } else if (event.type === "message.update") {
       setMessages((prev) => prev.map(m =>
         m.ID === event.payload.ID ? { ...m, Content: event.payload.Content } : m
@@ -95,7 +95,7 @@ export default function RoomDashboardPlaceholder() {
           <p className="text-sm text-textMed">Public Protocol Channel</p>
         </header>
 
-        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div className="custom-scroll mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
           {isLoading && (
             <p className="text-center text-sm text-textMed">Loading messages...</p>
           )}

@@ -29,23 +29,30 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
     if (!roomID) return
 
     let ws: WebSocket
+    let cancelled = false
 
     const connect = async () => {
       const res = await fetch("/api/auth/token")
-      if (!res.ok) return
+      if (!res.ok || cancelled) return
 
       const { token } = await res.json()
+      if (cancelled) return
+
       const host = process.env.NEXT_PUBLIC_WS_HOST ?? "localhost:8080"
       ws = new WebSocket(`ws://${host}/ws/room/${roomID}?token=${token}`)
 
       ws.onmessage = (e) => {
+        if (cancelled) return
         const event = JSON.parse(e.data) as RoomEvent
-        onEventRef.current(event) 
+        onEventRef.current(event)
       }
     }
 
     connect()
 
-    return () => { ws?.close() }
+    return () => {
+      cancelled = true
+      ws?.close()
+    }
   }, [roomID])
 }
