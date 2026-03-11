@@ -39,14 +39,6 @@ export default function UserLayout({ children }: Readonly<{ children: React.Reac
       <div className="flex flex-1 flex-col px-5 py-6">
         {children}
       </div>
-      {/* FAB: create a server or join via invite */}
-      <button
-        type="button"
-        aria-label="Create or join a server"
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-electricPurple text-white shadow-[0_0_24px_var(--color-purpleGlow)] transition hover:opacity-90 active:scale-95"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
     </div>
   );
 }

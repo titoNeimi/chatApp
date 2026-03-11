@@ -1,7 +1,8 @@
 'use client'
 
 import { Category, CategoryFilter, ServerCard, ServerCardData } from "@/components/serverCards";
-import { ArrowRight } from "lucide-react";
+import { ServerActionModal } from "@/components/serverActionModal";
+import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ export default function DiscoverPage() {
   const [error, setError] = useState<string | null>(null);
   const [servers, setServers] = useState<ServerCardData[]>([]);
   const [category, setCategory] = useState<Category>("All");
+  const [addServerOpen, setAddServerOpen] = useState(false);
 
   const router = useRouter()
 
@@ -57,6 +59,17 @@ export default function DiscoverPage() {
           See All <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} />
+
+      <button
+        type="button"
+        onClick={() => setAddServerOpen(true)}
+        className="fixed bottom-8 right-8 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-electricPurple text-white shadow-[0_0_24px_var(--color-purpleGlow)] transition hover:opacity-90 hover:shadow-[0_0_32px_var(--color-purpleGlow)] active:scale-95"
+        aria-label="Add server"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
       <CategoryFilter selected={category} onChange={setCategory} />
 

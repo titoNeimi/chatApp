@@ -5,6 +5,7 @@ import { Bell, ChevronRight, Compass, Home, MessageSquare, Moon, Plus, Search, S
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
+import { ServerActionModal } from "./serverActionModal";
 
 type ThemeMode = "dark" | "light";
 
@@ -45,6 +46,7 @@ export function Topbar(params: { servers: Server[] | null }) {
     return window.localStorage.getItem("chatapp-theme") === "light" ? "light" : "dark";
   });
   const [serversOpen, setServersOpen] = useState(false);
+  const [addServerOpen, setAddServerOpen] = useState(false);
 
   useEffect(() => {
     applyTheme(theme);
@@ -119,6 +121,7 @@ export function Topbar(params: { servers: Server[] | null }) {
             ))}
             <button
               type="button"
+              onClick={() => setAddServerOpen(true)}
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-textHigh"
               aria-label="Add server"
             >
@@ -148,6 +151,7 @@ export function Topbar(params: { servers: Server[] | null }) {
         </TopbarActionButton>
         <HexProfileButton />
       </div>
+      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} />
     </header>
   );
 }
