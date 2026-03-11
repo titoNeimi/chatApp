@@ -1,13 +1,20 @@
 'use client'
 import { Paperclip, SendHorizontal, Smile } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
+
+type RoomMember = {
+  UserID: string;
+  Username: string;
+};
+
 
 type Message = {
   ID: string;
   Content: string;
   UserID: string;
+  Username: string;
   ReplyToMessageID: string | null;
   RoomID: string;
   CreatedAt: string;
@@ -20,50 +27,42 @@ export default function RoomDashboardPlaceholder() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState("");
+  const userMapRef = useRef<Record<string, RoomMember>>({});
 
-  const params = useParams<{ serverID: string, roomID: string }>();
-
+  const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
-
-  const handleEvent = useCallback((event: RoomEvent) => {
-    if (event.type === "message.new") {
-      setMessages((prev) => prev.some(m => m.ID === event.payload.ID) ? prev : [...prev, event.payload])
-    } else if (event.type === "message.update") {
-      setMessages((prev) => prev.map(m =>
-        m.ID === event.payload.ID ? { ...m, Content: event.payload.Content } : m
-      ))
-    } else if (event.type === "message.delete") {
-      setMessages((prev) => prev.filter(m => m.ID !== event.payload.ID))
-    }
-  }, [])
-
-  useRoomSocket(roomID, handleEvent)
-
-  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!messageInput.trim()) return
-    await fetch(`/api/servers/${serverID}/rooms/${roomID}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: messageInput }),
-    })
-    setMessageInput("")
-  }
 
   useEffect(() => {
     if (!serverID || !roomID) return;
 
-    const fetchMessages = async () => {
+    const fetchAll = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/servers/${serverID}/rooms/${roomID}/messages`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch messages: ${response.statusText}`);
-        }
-        const data = await response.json();
-        console.log("Fetched messages:", data);
-        setMessages(data);
+        const base = `/api/servers/${serverID}/rooms/${roomID}`;
+        const [membersRes, , messagesRes] = await Promise.all([
+          fetch(`${base}/users`),
+          fetch(`${base}/me`),
+          fetch(`${base}/messages`),
+        ]);
+
+        if (!membersRes.ok) throw new Error(`Failed to fetch members: ${membersRes.statusText}`);
+        if (!messagesRes.ok) throw new Error(`Failed to fetch messages: ${messagesRes.statusText}`);
+
+        const [members, rawMessages]: [RoomMember[], Omit<Message, 'Username'>[]] = await Promise.all([
+          membersRes.json(),
+          messagesRes.json(),
+        ]);
+
+        const userMap = Object.fromEntries(members.map(m => [m.UserID, m]));
+        userMapRef.current = userMap;
+
+        const enriched: Message[] = rawMessages.map(msg => ({
+          ...msg,
+          Username: userMap[msg.UserID]?.Username ?? msg.UserID.slice(0, 8),
+        }));
+
+        setMessages(enriched);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
       } finally {
@@ -71,8 +70,40 @@ export default function RoomDashboardPlaceholder() {
       }
     };
 
-    fetchMessages();
+    fetchAll();
   }, [serverID, roomID]);
+
+  const handleEvent = useCallback((event: RoomEvent) => {
+    if (event.type === "message.new") {
+      setMessages((prev) => {
+        if (prev.some(m => m.ID === event.payload.ID)) return prev;
+        const enriched: Message = {
+          ...event.payload,
+          Username: userMapRef.current[event.payload.UserID]?.Username ?? event.payload.UserID.slice(0, 8),
+        };
+        return [...prev, enriched];
+      });
+    } else if (event.type === "message.update") {
+      setMessages((prev) => prev.map(m =>
+        m.ID === event.payload.ID ? { ...m, Content: event.payload.Content } : m
+      ));
+    } else if (event.type === "message.delete") {
+      setMessages((prev) => prev.filter(m => m.ID !== event.payload.ID));
+    }
+  }, []);
+
+  useRoomSocket(roomID, handleEvent);
+
+  const handleSend = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!messageInput.trim()) return;
+    await fetch(`/api/servers/${serverID}/rooms/${roomID}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: messageInput }),
+    });
+    setMessageInput("");
+  };
 
   if (!serverID || !roomID) {
     return (
@@ -81,8 +112,6 @@ export default function RoomDashboardPlaceholder() {
       </div>
     );
   }
-  
-
 
   return (
     <section className="relative flex h-[calc(100dvh-8.5rem)] min-h-120 w-full min-w-0 flex-1 overflow-hidden">
@@ -102,20 +131,20 @@ export default function RoomDashboardPlaceholder() {
           {error && (
             <p className="text-center text-sm text-red-400">{error}</p>
           )}
-          {!isLoading && !error && messages && messages.length === 0 && (
+          {!isLoading && !error && messages.length === 0 && (
             <p className="text-center text-sm text-textMed">No messages yet. Be the first to send one!</p>
           )}
-          {messages && messages.map((message) => (
+          {messages.map((message) => (
             <article
               key={message.ID}
               className="flex w-full items-end gap-2 justify-start sm:gap-3"
             >
-              <HexAvatar initials={message.UserID.slice(0, 2).toUpperCase()} />
+              <HexAvatar initials={message.Username.slice(0, 2).toUpperCase()} />
 
               <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-semibold text-textHigh">
-                    {message.UserID.slice(0, 8)}
+                    {message.Username}
                   </span>
                   <span className="text-textMed">
                     {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
