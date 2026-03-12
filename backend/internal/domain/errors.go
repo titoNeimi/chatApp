@@ -26,5 +26,6 @@ var (
 	ErrServerRoleNotFound      = errors.New("server role not found")
 	ErrServerRoleAlreadyExists = errors.New("server role with this name already exists")
 	ErrServerBanNotFound       = errors.New("server ban not found")
-	ErrUserAlreadyBanned       = errors.New("user is already banned from this server")
+	ErrUserAlreadyBanned            = errors.New("user is already banned from this server")
+	ErrPermissionOverrideNotFound   = errors.New("permission override not found")
 )
