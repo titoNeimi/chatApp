@@ -1,8 +1,9 @@
 'use client'
-import { Paperclip, SendHorizontal, Smile } from "lucide-react";
+import { Paperclip, Pencil, SendHorizontal, Smile, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
+import { useUser } from "@/context/userContext";
 
 type RoomMember = {
   UserID: string;
@@ -23,6 +24,7 @@ type Message = {
 };
 
 export default function RoomDashboardPlaceholder() {
+  const { user } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -134,29 +136,57 @@ export default function RoomDashboardPlaceholder() {
           {!isLoading && !error && messages.length === 0 && (
             <p className="text-center text-sm text-textMed">No messages yet. Be the first to send one!</p>
           )}
-          {messages.map((message) => (
-            <article
-              key={message.ID}
-              className="flex w-full items-end gap-2 justify-start sm:gap-3"
-            >
-              <HexAvatar initials={message.Username.slice(0, 2).toUpperCase()} />
+          {messages.map((message) => {
+            const canEdit = message.UserID === user?.id;
+            const canDelete = message.UserID === user?.id || user?.role === 'admin';
+            return (
+              <article
+                key={message.ID}
+                className="group flex w-full items-end gap-2 justify-start sm:gap-3"
+              >
+                <HexAvatar initials={message.Username.slice(0, 2).toUpperCase()} />
 
-              <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-semibold text-textHigh">
-                    {message.Username}
-                  </span>
-                  <span className="text-textMed">
-                    {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
+                <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-semibold text-textHigh">
+                      {message.Username}
+                    </span>
+                    <span className="text-textMed">
+                      {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
+                      {message.Content}
+                    </p>
+                    {(canEdit || canDelete) && (
+                      <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-electricPurple"
+                            aria-label="Edit message"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-red-400"
+                            aria-label="Delete message"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
-                  {message.Content}
-                </p>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
 
         <footer className="mt-4">

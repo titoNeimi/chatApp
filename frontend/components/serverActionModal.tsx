@@ -9,9 +9,11 @@ type View = "pick" | "create" | "join";
 export function ServerActionModal({
   open,
   onClose,
+  onServerCreated,
 }: {
   open: boolean;
   onClose: () => void;
+  onServerCreated: () => void;
 }) {
   const [view, setView] = useState<View>("pick");
 
@@ -23,7 +25,7 @@ export function ServerActionModal({
   return (
     <Modal open={open} onClose={handleClose}>
       {view === "pick" && <PickView onSelect={setView} />}
-      {view === "create" && <CreateView onBack={() => setView("pick")} onClose={handleClose} />}
+      {view === "create" && <CreateView onBack={() => setView("pick")} onClose={handleClose} onServerCreated={onServerCreated} />}
       {view === "join" && <JoinView onBack={() => setView("pick")} onClose={handleClose} />}
     </Modal>
   );
@@ -87,14 +89,33 @@ function OptionCard({
   );
 }
 
-function CreateView({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+function CreateView({ onBack, onClose, onServerCreated }: { onBack: () => void; onClose: () => void; onServerCreated: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire up create server API call
-    onClose();
+    try {
+      setLoading(true);
+      const response = await fetch("/api/servers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, description }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create server: ${response.statusText}`);
+      }
+      onServerCreated();
+      onClose();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An unknown error occurred while creating the server");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -135,14 +156,22 @@ function CreateView({ onBack, onClose }: { onBack: () => void; onClose: () => vo
             className="w-full resize-none rounded-lg border border-softBorder bg-deepNavy px-3 py-2.5 text-sm text-textHigh placeholder:text-textMed/50 outline-none transition focus:border-electricPurple focus:shadow-[0_0_0_2px_var(--color-purpleGlow)]"
           />
         </Field>
-
+        
         <button
           type="submit"
-          disabled={!name.trim()}
+          disabled={!name.trim() || loading}
           className="mt-1 w-full rounded-full bg-electricPurple py-2.5 text-sm font-semibold text-white shadow-[0_0_16px_var(--color-purpleGlow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Create Server
+          {loading ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Creating...
+            </div>
+          ) : (
+            "Create Server"
+          )}
         </button>
+        {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       </form>
     </div>
   );

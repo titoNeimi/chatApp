@@ -38,8 +38,8 @@ function applyTheme(mode: ThemeMode) {
   Object.entries(selectedTheme).forEach(([k, v]) => root.style.setProperty(k, v));
 }
 
-export function Topbar(params: { servers: Server[] | null }) {
-  const { servers } = params;
+export function Topbar(params: { servers: Server[] | null; onServerCreated: () => void }) {
+  const { servers, onServerCreated } = params;
   const pathname = usePathname();
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "dark";
@@ -151,7 +151,7 @@ export function Topbar(params: { servers: Server[] | null }) {
         </TopbarActionButton>
         <HexProfileButton />
       </div>
-      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} />
+      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} onServerCreated={onServerCreated} />
     </header>
   );
 }
