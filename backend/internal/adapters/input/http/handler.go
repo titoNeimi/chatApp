@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"chatApp/internal/adapters/input/http/middleware"
 	"chatApp/internal/adapters/input/websockets"
 	jwtAdapter "chatApp/internal/adapters/output/jwt"
 	"chatApp/internal/adapters/output/postgres"
@@ -28,7 +29,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func SetUpRouter(e *echo.Echo, db *gorm.DB) {
-	e.Use(RequestLogger())
+	e.Use(middleware.RequestLogger())
 
 	e.Validator = &CustomValidator{validator: validator.New()}
 
@@ -56,9 +57,9 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	serverService := application.NewServerService(serverRepo, roomRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 
-	authMiddleware := RequireAuth(authService)
-	adminOnly := RequireRoles(domain.RoleAdmin)
-	userOrAdmin := RequireRoles(domain.RoleUser, domain.RoleAdmin)
+	authMiddleware := middleware.RequireAuth(authService)
+	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
+	userOrAdmin := middleware.RequireRoles(domain.RoleUser, domain.RoleAdmin)
 
 	AuthHandler := NewAuthHandler(authService, userService)
 	UserHandler := newUserHandler(userService)
@@ -67,23 +68,22 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	roomHandler := NewRoomHandler(roomService)
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
 
-
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
 	users := e.Group("/users", authMiddleware)
 	{
 		users.GET("", UserHandler.GetAll, adminOnly)
-		users.GET("/:userID/servers", serverHandler.ListByUserID, RequireSelfOrAdmin("userID"))
-		users.GET("/:userID", UserHandler.GetByID, RequireSelfOrAdmin("userID"))
-		users.PUT("/:userID", UserHandler.Update, RequireSelfOrAdmin("userID"))
-		users.DELETE("/:userID", UserHandler.Delete, RequireSelfOrAdmin("userID"))
+		users.GET("/:userID/servers", serverHandler.ListByUserID, middleware.RequireSelfOrAdmin("userID"))
+		users.GET("/:userID", UserHandler.GetByID, middleware.RequireSelfOrAdmin("userID"))
+		users.PUT("/:userID", UserHandler.Update, middleware.RequireSelfOrAdmin("userID"))
+		users.DELETE("/:userID", UserHandler.Delete, middleware.RequireSelfOrAdmin("userID"))
 		users.PATCH("/:userID/role", UserHandler.ChangeRole, adminOnly)
 	}
 
 	server := e.Group("/server", authMiddleware)
 	{
 		server.GET("", serverHandler.GetAll)
-		server.POST("", serverHandler.Create, adminOnly)
+		server.POST("", serverHandler.Create, userOrAdmin)
 		server.GET("/:serverID", serverHandler.GetServerByID, userOrAdmin)
 		server.PUT("/:serverID", serverHandler.Update, adminOnly)
 		server.DELETE("/:serverID", serverHandler.SoftDelete, adminOnly)
@@ -103,8 +103,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.POST("", roomHandler.Create, userOrAdmin)
 		room.GET("/:roomID", roomHandler.GetByID, userOrAdmin)
 		room.PUT("/:roomID", roomHandler.Update, userOrAdmin)
-		room.POST("/:roomID/users/:userID", roomHandler.AddUserToRoom, RequireSelfOrAdmin("userID"))
-		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom, RequireSelfOrAdmin("userID"))
+		room.POST("/:roomID/users/:userID", roomHandler.AddUserToRoom, middleware.RequireSelfOrAdmin("userID"))
+		room.DELETE("/:roomID/users/:userID", roomHandler.RemoveUserFromRoom, middleware.RequireSelfOrAdmin("userID"))
 
 		room.GET("/:roomID/users", roomHandler.ListMembersByRoom, userOrAdmin)
 		room.GET("/:roomID/me", roomHandler.GetMyMembership)
@@ -120,7 +120,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		message.DELETE("/:messageID", messageHandler.SoftDelete, userOrAdmin)
 
 		message.GET("/room/:roomID", messageHandler.ListByRoomID, userOrAdmin)
-		message.GET("/user/:userID", messageHandler.ListByUserID, RequireSelfOrAdmin("userID"))
+		message.GET("/user/:userID", messageHandler.ListByUserID, middleware.RequireSelfOrAdmin("userID"))
 	}
 
 	auth := e.Group("/auth")

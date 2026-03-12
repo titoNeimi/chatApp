@@ -2,6 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
+	"chatApp/internal/adapters/input/http/middleware"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
 	"errors"
@@ -127,7 +128,7 @@ func (h *AuthHandler) Logout(c *echo.Context) error {
 }
 
 func (h *AuthHandler) Me(c *echo.Context) error {
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 	}

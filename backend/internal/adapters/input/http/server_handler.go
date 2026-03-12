@@ -2,6 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
+	"chatApp/internal/adapters/input/http/middleware"
 	valaidation "chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
@@ -55,7 +56,7 @@ func (h *serverHandler) Create(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -156,7 +157,7 @@ func (h *serverHandler) JoinServer(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

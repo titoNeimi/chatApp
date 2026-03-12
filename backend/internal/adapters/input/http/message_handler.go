@@ -2,6 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
+	"chatApp/internal/adapters/input/http/middleware"
 	"chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/adapters/input/websockets"
 	"chatApp/internal/domain"
@@ -50,7 +51,7 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 		}
 	}
 
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 	}
@@ -82,12 +83,12 @@ func (h *MessageHandler) SoftDelete(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 	}
 
-	role, err := GetAuthenticatedUserRole(c)
+	role, err := middleware.GetAuthenticatedUserRole(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 	}
@@ -119,7 +120,7 @@ func (h *MessageHandler) UpdateContent(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	userID, err := GetAuthenticatedUserID(c)
+	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
 	}
