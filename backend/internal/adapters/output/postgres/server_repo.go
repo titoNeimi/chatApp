@@ -153,3 +153,16 @@ func (r *serverRepo) AddUserToServer(serverID, userID string) error {
 	return r.db.Clauses(clause.OnConflict{DoNothing: true}).
 		Create(&models.ServerUsers{ServerID: serverID, UserID: userID}).Error
 }
+
+func (r *serverRepo) IsUserMember(serverID, userID string) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.ServerUsers{}).
+		Where("server_id = ? AND user_id = ?", serverID, userID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func (r *serverRepo) RemoveUserFromServer(serverID, userID string) error {
+	return r.db.Where("server_id = ? AND user_id = ?", serverID, userID).
+		Delete(&models.ServerUsers{}).Error
+}
