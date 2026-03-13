@@ -42,6 +42,9 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	messageRepo := postgres.NewMessageRepo(db)
 	serverRepo := postgres.NewServerRepo(db)
 	roomRepo := postgres.NewRoomRepo(db)
+	roleRepo := postgres.NewServerRoleRepo(db)
+	permissionRepo := postgres.NewPermissionRepo(db)
+	banRepo := postgres.NewServerBanRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -56,6 +59,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	messageService := application.NewMessageService(messageRepo, roomRepo)
 	serverService := application.NewServerService(serverRepo, roomRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
+	roleService := application.NewServerRoleService(roleRepo, banRepo, serverRepo)
+	permissionService := application.NewPermissionService(permissionRepo, roleRepo, banRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -66,6 +71,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	messageHandler := newMessageHandler(messageService, roomService, wsRegistry)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
+	roleHandler := NewServerRoleHandler(roleService)
+	permHandler := NewPermissionHandler(permissionService)
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
@@ -95,6 +102,36 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 			room.GET("", roomHandler.ListByServer, userOrAdmin)
 			room.PUT("/:roomID", roomHandler.UpdateInServer, adminOnly)
 			room.DELETE("/:roomID", roomHandler.SoftDeleteInServer, adminOnly)
+
+			overrides := room.Group("/:roomID/overrides", middleware.RequireServerMember(serverRepo))
+			{
+				overrides.GET("", permHandler.ListOverrides)
+				overrides.POST("", permHandler.UpsertOverride, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+				overrides.DELETE("/:overrideID", permHandler.DeleteOverride, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			}
+		}
+
+		roles := server.Group("/:serverID/roles", middleware.RequireServerMember(serverRepo))
+		{
+			roles.GET("", roleHandler.ListRoles)
+			roles.POST("", roleHandler.CreateRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			roles.GET("/:roleID", roleHandler.GetRole)
+			roles.PUT("/:roleID", roleHandler.UpdateRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			roles.DELETE("/:roleID", roleHandler.DeleteRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			roles.POST("/assign", roleHandler.AssignRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			roles.DELETE("/revoke", roleHandler.RevokeRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+		}
+
+		members := server.Group("/:serverID/members", middleware.RequireServerMember(serverRepo))
+		{
+			members.GET("", roleHandler.ListUsersWithRoles)
+		}
+
+		bans := server.Group("/:serverID/bans", middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+		{
+			bans.GET("", roleHandler.ListBans)
+			bans.POST("", roleHandler.BanUser)
+			bans.DELETE("/:userID", roleHandler.UnbanUser)
 		}
 	}
 
