@@ -1,5 +1,6 @@
 'use client'
-import { Paperclip, Pencil, SendHorizontal, Smile, Trash2 } from "lucide-react";
+import { EffectivePermissions } from "@/types/role";
+import { Check, Paperclip, Pencil, SendHorizontal, Smile, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
@@ -29,7 +30,13 @@ export default function RoomDashboardPlaceholder() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState("");
+  const [myPermissions, setMyPermissions] = useState<EffectivePermissions | null>(null);
+  const [editingMessageID, setEditingMessageID] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null);
   const userMapRef = useRef<Record<string, RoomMember>>({});
+
+  // TODO: fetch GET /api/servers/${serverID}/my-permissions?roomID=${roomID} → setMyPermissions(data)
 
   const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
@@ -120,10 +127,8 @@ export default function RoomDashboardPlaceholder() {
       <div className="relative flex h-full min-h-0 w-full flex-col rounded-2xl bg-surfaceNavy p-4 shadow-[0_20px_40px_var(--color-panelShadow)] sm:p-5">
         <header className="flex items-center gap-3 pb-3">
           <p className="text-sm font-semibold text-electricPurple">
-            /main-frame
+            #{roomID}
           </p>
-          <span className="text-xs text-textMed">|</span>
-          <p className="text-sm text-textMed">Public Protocol Channel</p>
         </header>
 
         <div className="custom-scroll mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
@@ -138,7 +143,10 @@ export default function RoomDashboardPlaceholder() {
           )}
           {messages.map((message) => {
             const canEdit = message.UserID === user?.id;
-            const canDelete = message.UserID === user?.id || user?.role === 'admin';
+            const canDelete = message.UserID === user?.id || user?.role === 'admin' || myPermissions?.can_delete_messages === true;
+            const isEditing = editingMessageID === message.ID;
+            const isConfirmingDelete = confirmDeleteID === message.ID;
+
             return (
               <article
                 key={message.ID}
@@ -148,23 +156,86 @@ export default function RoomDashboardPlaceholder() {
 
                 <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-textHigh">
-                      {message.Username}
-                    </span>
+                    <span className="font-semibold text-textHigh">{message.Username}</span>
                     <span className="text-textMed">
                       {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
 
                   <div className="flex items-end gap-2">
-                    <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
-                      {message.Content}
-                    </p>
-                    {(canEdit || canDelete) && (
+                    {isEditing ? (
+                      <div className="flex items-center gap-2 rounded-2xl bg-deepNavy px-3 py-2 shadow-sm">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="min-w-0 flex-1 bg-transparent text-sm text-textHigh outline-none"
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") { setEditingMessageID(null); setEditContent(""); }
+                            if (e.key === "Enter" && editContent.trim()) {
+                              // TODO: call PUT /api/messages/${message.ID} with { content: editContent }
+                              setMessages((prev) => prev.map((m) => m.ID === message.ID ? { ...m, Content: editContent } : m));
+                              setEditingMessageID(null);
+                              setEditContent("");
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={!editContent.trim()}
+                          onClick={() => {
+                            // TODO: call PUT /api/messages/${message.ID} with { content: editContent }
+                            setMessages((prev) => prev.map((m) => m.ID === message.ID ? { ...m, Content: editContent } : m));
+                            setEditingMessageID(null);
+                            setEditContent("");
+                          }}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-electricPurple transition hover:bg-electricPurple/10 disabled:opacity-40"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingMessageID(null); setEditContent(""); }}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-textMed transition hover:bg-surfaceNavy"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : isConfirmingDelete ? (
+                      <div className="flex items-center gap-2 rounded-2xl bg-deepNavy px-4 py-3 shadow-sm">
+                        <span className="text-xs text-red-400">Delete this message?</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // TODO: call DELETE /api/messages/${message.ID}
+                            setMessages((prev) => prev.filter((m) => m.ID !== message.ID));
+                            setConfirmDeleteID(null);
+                          }}
+                          className="rounded-full bg-red-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-600"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteID(null)}
+                          className="rounded-full border border-softBorder px-3 py-1 text-xs font-semibold text-textMed transition hover:text-textHigh"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
+                        {message.Content}
+                      </p>
+                    )}
+
+                    {!isEditing && !isConfirmingDelete && (canEdit || canDelete) && (
                       <div className="mb-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         {canEdit && (
                           <button
                             type="button"
+                            onClick={() => { setEditingMessageID(message.ID); setEditContent(message.Content); }}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-electricPurple"
                             aria-label="Edit message"
                           >
@@ -174,6 +245,7 @@ export default function RoomDashboardPlaceholder() {
                         {canDelete && (
                           <button
                             type="button"
+                            onClick={() => setConfirmDeleteID(message.ID)}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-red-400"
                             aria-label="Delete message"
                           >
