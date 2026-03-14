@@ -2,6 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
+	"chatApp/internal/adapters/input/http/middleware"
 	"chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
@@ -80,6 +81,27 @@ func (h *permissionHandler) DeleteOverride(c *echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *permissionHandler) GetMyPermissions(c *echo.Context) error {
+	serverID := c.Param("serverID")
+	if err := validation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	userID, err := middleware.GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	roomID := c.QueryParam("roomID")
+
+	perms, err := h.permService.ResolvePermissions(serverID, roomID, userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+	}
+
+	return c.JSON(http.StatusOK, perms)
 }
 
 func (h *permissionHandler) ListOverrides(c *echo.Context) error {

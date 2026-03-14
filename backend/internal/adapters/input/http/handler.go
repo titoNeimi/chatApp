@@ -122,6 +122,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 			roles.DELETE("/revoke", roleHandler.RevokeRole, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
 		}
 
+		server.GET("/:serverID/my-permissions", permHandler.GetMyPermissions, middleware.RequireServerMember(serverRepo))
+
 		members := server.Group("/:serverID/members", middleware.RequireServerMember(serverRepo))
 		{
 			members.GET("", roleHandler.ListUsersWithRoles)
