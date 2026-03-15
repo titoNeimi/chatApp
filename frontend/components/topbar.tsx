@@ -1,7 +1,8 @@
 'use client'
 
+import { useUser } from "@/context/userContext";
 import { Server } from "@/types/server";
-import { Bell, ChevronRight, Compass, Home, MessageSquare, Moon, Plus, Search, Sparkles, Sun } from "lucide-react";
+import { Bell, ChevronRight, Compass, Home, MessageSquare, Moon, Plus, Search, Shield, Sparkles, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
@@ -40,6 +41,7 @@ function applyTheme(mode: ThemeMode) {
 
 export function Topbar(params: { servers: Server[] | null; onServerCreated: () => void }) {
   const { servers, onServerCreated } = params;
+  const { user } = useUser();
   const pathname = usePathname();
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "dark";
@@ -82,6 +84,11 @@ export function Topbar(params: { servers: Server[] | null; onServerCreated: () =
         <NavLink href="/messages" active={pathname === "/messages"} icon={<MessageSquare className="h-4 w-4" />}>
           Messages
         </NavLink>
+        {user?.role === "admin" && (
+          <NavLink href="/admin" active={pathname === "/admin"} icon={<Shield className="h-4 w-4" />}>
+            Admin
+          </NavLink>
+        )}
       </nav>
 
       <span className="h-6 w-px shrink-0 bg-softBorder" />

@@ -25,6 +25,7 @@ export const RoomMocks: Room[] = [
     description: "Canal para hablar temas varios",
     server_id: "pepito_server",
     type: "server",
+    is_private: false,
     created_at: new Date(),
     updated_at: new Date()
   },
@@ -34,6 +35,7 @@ export const RoomMocks: Room[] = [
     description: "Canal para leer los anuncios",
     server_id: "pepito_server",
     type: "server",
+    is_private: false,
     created_at: new Date(),
     updated_at: new Date()
   },
@@ -43,6 +45,7 @@ export const RoomMocks: Room[] = [
     description: "Canal para hablar sobre codigo",
     server_id: "pepito_server",
     type: "server",
+    is_private: false,
     created_at: new Date(),
     updated_at: new Date()
   }

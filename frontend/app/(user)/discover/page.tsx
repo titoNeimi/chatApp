@@ -60,7 +60,7 @@ export default function DiscoverPage() {
         </Link>
       </div>
 
-      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} />
+      <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} onServerCreated={() => {}} />
 
       <button
         type="button"
