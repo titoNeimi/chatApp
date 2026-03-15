@@ -6,12 +6,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { useUser } from "@/context/userContext";
 
-export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: string | null, serverID: string}) {
+export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: string | null, serverID: string, canManageRooms?: boolean}) {
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useUser();
-  const isAdmin = user?.role === 'admin';
-
-  const {rooms, selectedRoomID, serverID} = params
+  const {rooms, selectedRoomID, serverID, canManageRooms = false} = params
+  const canManage = user?.role === 'admin' || canManageRooms;
 
   return (
     <aside
@@ -37,7 +36,7 @@ export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: strin
         </button>
       </div>
 
-      {isAdmin && (
+      {canManage && (
         <button
           type="button"
           className="flex items-center gap-2 rounded-2xl border border-dashed border-softBorder px-4 py-3 text-sm font-semibold text-textMed transition hover:border-electricPurple hover:text-electricPurple group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0"
@@ -49,7 +48,7 @@ export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: strin
       )}
 
       {rooms && rooms.map((room) => (
-        <RoomButton key={room.id} selected={selectedRoomID == room.id} room={room} serverID={serverID} isAdmin={isAdmin}/>
+        <RoomButton key={room.id} selected={selectedRoomID == room.id} room={room} serverID={serverID} canManage={canManage}/>
       ))}
 
       {!rooms && (
@@ -58,7 +57,7 @@ export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: strin
         </div>
       )}
 
-      {isAdmin && (
+      {canManage && (
         <Link
           href={`/${serverID}/settings`}
           className="mt-auto flex items-center gap-2 rounded-2xl border border-softBorder px-4 py-3 text-sm font-semibold text-textMed transition hover:border-electricPurple/40 hover:text-textHigh group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0"
@@ -72,8 +71,8 @@ export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: strin
   );
 }
 
-function RoomButton(params: { selected: boolean; room: Room; serverID: string; isAdmin: boolean }) {
-  const { selected, room, serverID, isAdmin } = params;
+function RoomButton(params: { selected: boolean; room: Room; serverID: string; canManage: boolean }) {
+  const { selected, room, serverID, canManage } = params;
   return (
     <div
       title={room.name}
@@ -95,7 +94,7 @@ function RoomButton(params: { selected: boolean; room: Room; serverID: string; i
         )}
       </div>
 
-      {isAdmin && (
+      {canManage && (
         <div className="absolute right-2 top-2 z-20 flex gap-1 opacity-0 transition-opacity group-hover/room:opacity-100 group-data-[collapsed=true]:hidden">
           <button
             type="button"

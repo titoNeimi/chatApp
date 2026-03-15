@@ -71,6 +71,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     )
   }
 
+  // TODO: fetch GET /api/servers/${serverID}/my-permissions → pass canManageRooms prop to RoomGallery
+
   return (
     <div className="flex flex-1 gap-6 overflow-hidden transition-colors">
       <RoomGallery rooms={rooms} serverID={serverID} selectedRoomID={roomID}/>
