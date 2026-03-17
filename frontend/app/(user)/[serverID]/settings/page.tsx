@@ -1,8 +1,9 @@
 'use client'
 
+import { useServer } from "@/context/serverContext";
 import { useUser } from "@/context/userContext";
 import { Room } from "@/types/room";
-import { EffectivePermissions, ServerBan, ServerRole, UserWithRoles } from "@/types/role";
+import { ServerBan, ServerRole, UserWithRoles } from "@/types/role";
 import {
   AlertTriangle,
   Ban,
@@ -20,8 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 
 type Tab = "overview" | "roles" | "members" | "rooms" | "bans" | "invitations";
 
@@ -31,15 +31,8 @@ export default function ServerSettingsPage() {
   const params = useParams<{ serverID: string }>();
   const serverID = params?.serverID ?? "";
 
-  const [permissions, setPermissions] = useState<EffectivePermissions | null>(null);
-  const [permLoading, setPermLoading] = useState(true);
+  const { permissions, loading: permLoading } = useServer();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-
-  useEffect(() => {
-    // TODO: fetch GET /api/servers/${serverID}/my-permissions → setPermissions(data)
-    setPermissions(null);
-    setPermLoading(false);
-  }, [serverID]);
 
   const isAppAdmin = user?.role === "admin";
   const canManageMembers = isAppAdmin || permissions?.can_manage_members === true;
@@ -102,11 +95,44 @@ export default function ServerSettingsPage() {
 /* ─── Overview ──────────────────────────────────────────────────────────── */
 
 function OverviewTab({ serverID }: { serverID: string }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const { server, refreshServer } = useServer();
+  const router = useRouter();
+  const [name, setName] = useState(server?.name ?? "");
+  const [description, setDescription] = useState(server?.description ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  // TODO: on mount fetch GET /api/servers/${serverID} → populate name and description fields
+  useEffect(() => {
+    if (server) {
+      setName(server.name);
+      setDescription(server.description ?? "");
+    }
+  }, [server]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/servers/${serverID}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description }),
+      });
+      if (res.ok) await refreshServer();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/servers/${serverID}`, { method: "DELETE" });
+      if (res.ok) router.push("/dashboard");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="flex max-w-xl flex-col gap-6">
@@ -131,11 +157,11 @@ function OverviewTab({ serverID }: { serverID: string }) {
         </Field>
         <button
           type="button"
-          disabled={!name.trim()}
-          // TODO: onClick → call PUT /api/servers/${serverID} with { name, description }
+          disabled={!name.trim() || saving}
+          onClick={handleSave}
           className="self-start rounded-full bg-electricPurple px-5 py-2 text-sm font-semibold text-white shadow-[0_0_16px_var(--color-purpleGlow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Save Changes
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </SettingsCard>
 
@@ -150,10 +176,11 @@ function OverviewTab({ serverID }: { serverID: string }) {
               <span className="text-xs text-red-400">Are you sure?</span>
               <button
                 type="button"
-                // TODO: onClick → call DELETE /api/servers/${serverID} then router.push("/dashboard")
-                className="rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600"
+                disabled={deleting}
+                onClick={handleDelete}
+                className="rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
               >
-                Yes, delete
+                {deleting ? "Deleting..." : "Yes, delete"}
               </button>
               <button
                 type="button"
@@ -187,11 +214,15 @@ function RolesTab({ serverID }: { serverID: string }) {
   const [editingRole, setEditingRole] = useState<ServerRole | null>(null);
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null);
 
-  // TODO: on mount fetch GET /api/servers/${serverID}/roles → setRoles(data)
+  useEffect(() => {
+    fetch(`/api/servers/${serverID}/roles`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setRoles);
+  }, [serverID]);
 
-  const handleDelete = (id: string) => {
-    // TODO: call DELETE /api/servers/${serverID}/roles/${id}, then remove from state on success
-    setRoles((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/servers/${serverID}/roles/${id}`, { method: "DELETE" });
+    if (res.ok) setRoles((prev) => prev.filter((r) => r.id !== id));
     setConfirmDeleteID(null);
   };
 
@@ -215,20 +246,13 @@ function RolesTab({ serverID }: { serverID: string }) {
         <RoleForm
           title="Create Role"
           onCancel={() => setShowCreate(false)}
-          onSubmit={(data) => {
-            // TODO: call POST /api/servers/${serverID}/roles with data → use the returned role instead of the locally generated one
-            const newRole: ServerRole = {
-              id: crypto.randomUUID(),
-              server_id: serverID,
-              name: data.name,
-              can_delete_messages: data.can_delete_messages,
-              can_mute_members: data.can_mute_members,
-              can_manage_members: data.can_manage_members,
-              can_manage_rooms: data.can_manage_rooms,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-            setRoles((prev) => [...prev, newRole]);
+          onSubmit={async (data) => {
+            const res = await fetch(`/api/servers/${serverID}/roles`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (res.ok) { const newRole = await res.json(); setRoles((prev) => [...prev, newRole]); }
             setShowCreate(false);
           }}
         />
@@ -243,11 +267,13 @@ function RolesTab({ serverID }: { serverID: string }) {
               initialName={role.name}
               initialPerms={role}
               onCancel={() => setEditingRole(null)}
-              onSubmit={(data) => {
-                // TODO: call PUT /api/servers/${serverID}/roles/${role.id} with data, then update state with returned role
-                setRoles((prev) =>
-                  prev.map((r) => r.id === role.id ? { ...r, ...data, updated_at: new Date().toISOString() } : r)
-                );
+              onSubmit={async (data) => {
+                const res = await fetch(`/api/servers/${serverID}/roles/${role.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(data),
+                });
+                if (res.ok) { const updated = await res.json(); setRoles((prev) => prev.map((r) => r.id === role.id ? updated : r)); }
                 setEditingRole(null);
               }}
             />
@@ -453,8 +479,15 @@ function MembersTab({ serverID }: { serverID: string }) {
   const [roles, setRoles] = useState<ServerRole[]>([]);
   const [search, setSearch] = useState("");
 
-  // TODO: on mount fetch GET /api/servers/${serverID}/members → setMembers(data)
-  // TODO: on mount fetch GET /api/servers/${serverID}/roles → setRoles(data)
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/servers/${serverID}/members`, { cache: 'no-store' }),
+      fetch(`/api/servers/${serverID}/roles`, { cache: 'no-store' }),
+    ]).then(async ([membersRes, rolesRes]) => {
+      if (membersRes.ok) setMembers(await membersRes.json());
+      if (rolesRes.ok) setRoles(await rolesRes.json());
+    });
+  }, [serverID]);
 
   const filtered = members.filter((m) =>
     m.username.toLowerCase().includes(search.toLowerCase())
@@ -484,27 +517,21 @@ function MembersTab({ serverID }: { serverID: string }) {
             key={member.user_id}
             member={member}
             availableRoles={roles.filter((r) => !member.roles.some((mr) => mr.id === r.id))}
-            onRoleRevoke={(roleID) => {
-              // TODO: call DELETE /api/servers/${serverID}/members/${member.user_id}/roles/${roleID}
-              setMembers((prev) =>
-                prev.map((m) =>
-                  m.user_id === member.user_id
-                    ? { ...m, roles: m.roles.filter((r) => r.id !== roleID) }
-                    : m
-                )
-              );
+            onRoleRevoke={async (roleID) => {
+              const res = await fetch(`/api/servers/${serverID}/members/${member.user_id}/roles/${roleID}`, { method: "DELETE" });
+              if (res.ok) setMembers((prev) => prev.map((m) => m.user_id === member.user_id ? { ...m, roles: m.roles.filter((r) => r.id !== roleID) } : m));
             }}
-            onRoleAssign={(role) => {
-              // TODO: call POST /api/servers/${serverID}/members/${member.user_id}/roles with { role_id: role.id }
-              setMembers((prev) =>
-                prev.map((m) =>
-                  m.user_id === member.user_id ? { ...m, roles: [...m.roles, role] } : m
-                )
-              );
+            onRoleAssign={async (role) => {
+              const res = await fetch(`/api/servers/${serverID}/members/${member.user_id}/roles`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role_id: role.id }),
+              });
+              if (res.ok) setMembers((prev) => prev.map((m) => m.user_id === member.user_id ? { ...m, roles: [...m.roles, role] } : m));
             }}
-            onBan={() => {
-              // TODO: call POST /api/servers/${serverID}/bans/${member.user_id} with optional { reason }
-              setMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
+            onBan={async () => {
+              const res = await fetch(`/api/servers/${serverID}/bans/${member.user_id}`, { method: "POST" });
+              if (res.ok) setMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
             }}
           />
         ))}
@@ -624,6 +651,7 @@ function MemberRow({
 /* ─── Rooms ─────────────────────────────────────────────────────────────── */
 
 function RoomsTab({ serverID }: { serverID: string }) {
+  const { refreshRooms } = useServer();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -642,9 +670,9 @@ function RoomsTab({ serverID }: { serverID: string }) {
     fetchRooms();
   }, [serverID]);
 
-  const handleDelete = (id: string) => {
-    // TODO: call DELETE /api/servers/${serverID}/rooms/${id}, then remove from state on success
-    setRooms((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/servers/${serverID}/rooms/${id}`, { method: "DELETE" });
+    if (res.ok) { setRooms((prev) => prev.filter((r) => r.id !== id)); refreshRooms(); }
     setConfirmDeleteID(null);
   };
 
@@ -668,9 +696,13 @@ function RoomsTab({ serverID }: { serverID: string }) {
         <RoomForm
           title="Create Room"
           onCancel={() => setShowCreate(false)}
-          onSubmit={() => {
-            // TODO: call POST /api/servers/${serverID}/rooms with { name, description, is_private }
-            // TODO: on success append returned room to setRooms and close form
+          onSubmit={async (data) => {
+            const res = await fetch(`/api/servers/${serverID}/rooms`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (res.ok) { const newRoom = await res.json(); setRooms((prev) => [...prev, newRoom]); refreshRooms(); }
             setShowCreate(false);
           }}
         />
@@ -688,9 +720,13 @@ function RoomsTab({ serverID }: { serverID: string }) {
               initialDescription={room.description}
               initialPrivate={room.is_private}
               onCancel={() => setEditingRoom(null)}
-              onSubmit={() => {
-                // TODO: call PUT /api/servers/${serverID}/rooms/${room.id} with { name, description, is_private }
-                // TODO: on success update room in setRooms with returned data
+              onSubmit={async (data) => {
+                const res = await fetch(`/api/servers/${serverID}/rooms/${room.id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(data),
+                });
+                if (res.ok) { const updated = await res.json(); setRooms((prev) => prev.map((r) => r.id === room.id ? updated : r)); refreshRooms(); }
                 setEditingRoom(null);
               }}
             />
@@ -795,7 +831,7 @@ function RoomForm({
   initialDescription?: string;
   initialPrivate?: boolean;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (data: { name: string; description: string; is_private: boolean }) => void;
 }) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
@@ -838,7 +874,7 @@ function RoomForm({
         <button
           type="button"
           disabled={!name.trim()}
-          onClick={onSubmit}
+          onClick={() => onSubmit({ name, description, is_private: isPrivate })}
           className="rounded-full bg-electricPurple px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Save
@@ -859,9 +895,14 @@ function RoomForm({
 
 function BansTab({ serverID }: { serverID: string }) {
   const [bans, setBans] = useState<ServerBan[]>([]);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: on mount fetch GET /api/servers/${serverID}/bans → setBans(data)
+  useEffect(() => {
+    fetch(`/api/servers/${serverID}/bans`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => { setBans(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [serverID]);
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
@@ -876,9 +917,9 @@ function BansTab({ serverID }: { serverID: string }) {
           <BanRow
             key={ban.id}
             ban={ban}
-            onUnban={() => {
-              // TODO: call DELETE /api/servers/${serverID}/bans/${ban.user_id}, then remove from state on success
-              setBans((prev) => prev.filter((b) => b.id !== ban.id));
+            onUnban={async () => {
+              const res = await fetch(`/api/servers/${serverID}/bans/${ban.user_id}`, { method: "DELETE" });
+              if (res.ok) setBans((prev) => prev.filter((b) => b.id !== ban.id));
             }}
           />
         ))}
