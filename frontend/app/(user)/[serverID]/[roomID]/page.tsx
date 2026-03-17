@@ -36,8 +36,6 @@ export default function RoomDashboardPlaceholder() {
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null);
   const userMapRef = useRef<Record<string, RoomMember>>({});
 
-  // TODO: fetch GET /api/servers/${serverID}/my-permissions?roomID=${roomID} → setMyPermissions(data)
-
   const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
@@ -49,19 +47,24 @@ export default function RoomDashboardPlaceholder() {
       setIsLoading(true);
       try {
         const base = `/api/servers/${serverID}/rooms/${roomID}`;
-        const [membersRes, , messagesRes] = await Promise.all([
+        const [membersRes, , messagesRes, permissionsRes] = await Promise.all([
           fetch(`${base}/users`),
           fetch(`${base}/me`),
           fetch(`${base}/messages`),
+          fetch(`/api/servers/${serverID}/my-permissions?roomID=${roomID}`),
         ]);
 
         if (!membersRes.ok) throw new Error(`Failed to fetch members: ${membersRes.statusText}`);
         if (!messagesRes.ok) throw new Error(`Failed to fetch messages: ${messagesRes.statusText}`);
-
-        const [members, rawMessages]: [RoomMember[], Omit<Message, 'Username'>[]] = await Promise.all([
+        if (!permissionsRes.ok) throw new Error(`Failed to fetch permissions: ${permissionsRes.statusText}`);
+        
+        const [members, rawMessages, permissions]: [RoomMember[], Omit<Message, 'Username'>[], EffectivePermissions] = await Promise.all([
           membersRes.json(),
           messagesRes.json(),
+          permissionsRes.json(),
         ]);
+
+        setMyPermissions(permissions);
 
         const userMap = Object.fromEntries(members.map(m => [m.UserID, m]));
         userMapRef.current = userMap;
@@ -102,6 +105,23 @@ export default function RoomDashboardPlaceholder() {
   }, []);
 
   useRoomSocket(roomID, handleEvent);
+
+  const handleSaveEdit = async (messageID: string, content: string) => {
+    await fetch(`/api/messages/${messageID}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    setMessages((prev) => prev.map((m) => m.ID === messageID ? { ...m, Content: content } : m));
+    setEditingMessageID(null);
+    setEditContent("");
+  };
+
+  const handleDelete = async (messageID: string) => {
+    await fetch(`/api/messages/${messageID}`, { method: "DELETE" });
+    setMessages((prev) => prev.filter((m) => m.ID !== messageID));
+    setConfirmDeleteID(null);
+  };
 
   const handleSend = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -174,22 +194,14 @@ export default function RoomDashboardPlaceholder() {
                           onKeyDown={(e) => {
                             if (e.key === "Escape") { setEditingMessageID(null); setEditContent(""); }
                             if (e.key === "Enter" && editContent.trim()) {
-                              // TODO: call PUT /api/messages/${message.ID} with { content: editContent }
-                              setMessages((prev) => prev.map((m) => m.ID === message.ID ? { ...m, Content: editContent } : m));
-                              setEditingMessageID(null);
-                              setEditContent("");
+                              handleSaveEdit(message.ID, editContent);
                             }
                           }}
                         />
                         <button
                           type="button"
                           disabled={!editContent.trim()}
-                          onClick={() => {
-                            // TODO: call PUT /api/messages/${message.ID} with { content: editContent }
-                            setMessages((prev) => prev.map((m) => m.ID === message.ID ? { ...m, Content: editContent } : m));
-                            setEditingMessageID(null);
-                            setEditContent("");
-                          }}
+                          onClick={() => handleSaveEdit(message.ID, editContent)}
                           className="inline-flex h-6 w-6 items-center justify-center rounded-md text-electricPurple transition hover:bg-electricPurple/10 disabled:opacity-40"
                         >
                           <Check className="h-3.5 w-3.5" />
@@ -207,11 +219,7 @@ export default function RoomDashboardPlaceholder() {
                         <span className="text-xs text-red-400">Delete this message?</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            // TODO: call DELETE /api/messages/${message.ID}
-                            setMessages((prev) => prev.filter((m) => m.ID !== message.ID));
-                            setConfirmDeleteID(null);
-                          }}
+                          onClick={() => handleDelete(message.ID)}
                           className="rounded-full bg-red-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-600"
                         >
                           Yes
