@@ -2,10 +2,10 @@
 
 import { useUser } from "@/context/userContext";
 import { Server } from "@/types/server";
-import { Bell, ChevronRight, Compass, Home, MessageSquare, Moon, Plus, Search, Shield, Sparkles, Sun } from "lucide-react";
+import { Bell, ChevronRight, Compass, Home, LogOut, MessageSquare, Moon, Plus, Search, Settings, Shield, Sparkles, Sun } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { ServerActionModal } from "./serverActionModal";
 
 type ThemeMode = "dark" | "light";
@@ -211,16 +211,134 @@ function TopbarActionButton(params: { children: ReactNode; label: string; onClic
   );
 }
 
+type OnlineStatus = "online" | "away" | "offline";
+
+const STATUS_CONFIG: Record<OnlineStatus, { label: string; dot: string }> = {
+  online: { label: "Online",  dot: "bg-emerald-400" },
+  away:   { label: "Away",    dot: "bg-amber-400"   },
+  offline:{ label: "Offline", dot: "bg-slate-500"   },
+};
+
 function HexProfileButton() {
+  const { user, logout } = useUser();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  // TODO: Sync status with backend once an online-presence API is available
+  const [status, setStatus] = useState<OnlineStatus>("online");
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    router.push("/login");
+  };
+
+  const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : "U";
+
   return (
-    <button
-      type="button"
-      className="relative ml-1 inline-flex h-9 w-9 items-center justify-center"
-      aria-label="User profile"
-    >
-      <span className="absolute inset-0 [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-purpleGlow" />
-      <span className="absolute inset-[1.5px] [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-surfaceNavy transition hover:bg-deepNavy" />
-      <span className="relative z-10 text-sm font-semibold text-textHigh">U</span>
-    </button>
+    <div ref={ref} className="relative ml-1">
+      {/* Hex trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="User profile"
+        aria-expanded={open}
+        className="relative inline-flex h-9 w-9 items-center justify-center"
+      >
+        <span className="absolute inset-0 [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-purpleGlow" />
+        <span className="absolute inset-[1.5px] [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-surfaceNavy transition hover:bg-deepNavy" />
+        <span className="relative z-10 text-sm font-semibold text-textHigh">{initials}</span>
+        {/* Online status dot */}
+        <span className={`absolute right-0 bottom-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-deepNavy ${STATUS_CONFIG[status].dot}`} />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-softBorder bg-surfaceNavy shadow-[0_8px_32px_var(--color-panelShadow)]">
+
+          {/* User info */}
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center">
+              <span className="absolute inset-0 [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-electricPurple/30" />
+              <span className="absolute inset-[1.5px] [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-deepNavy" />
+              <span className="relative z-10 text-xs font-bold text-textHigh">{initials}</span>
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-textHigh">{user?.username ?? "User"}</p>
+              <p className="text-xs capitalize text-textMed">{user?.role ?? "member"}</p>
+            </div>
+          </div>
+
+          <div className="mx-3 h-px bg-softBorder" />
+
+          {/* Online status */}
+          <div className="px-2 py-2">
+            <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-textMed">
+              Status
+            </p>
+            {(Object.entries(STATUS_CONFIG) as [OnlineStatus, { label: string; dot: string }][]).map(
+              ([key, { label, dot }]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm transition ${
+                    status === key
+                      ? "bg-electricPurple/10 text-textHigh"
+                      : "text-textMed hover:bg-deepNavy hover:text-textHigh"
+                  }`}
+                >
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
+                  {label}
+                  {status === key && (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-electricPurple" />
+                  )}
+                </button>
+              )
+            )}
+          </div>
+
+          <div className="mx-3 h-px bg-softBorder" />
+
+          {/* Settings & Logout */}
+          <div className="px-2 py-2">
+            {/* TODO: Navigate to /settings once the user settings page is implemented */}
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm text-textMed transition hover:bg-deepNavy hover:text-textHigh"
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              Settings
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              Log out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
