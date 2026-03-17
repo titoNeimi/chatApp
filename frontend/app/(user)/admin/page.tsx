@@ -68,8 +68,18 @@ export default function AdminPage() {
 /* ─── Overview ──────────────────────────────────────────────────────────── */
 
 function OverviewTab() {
-  // TODO: fetch GET /api/users → derive totalUsers from response array length
-  // TODO: fetch GET /api/servers → derive totalServers from response array length
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalServers, setTotalServers] = useState(0);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/users', { cache: 'no-store' }),
+      fetch('/api/servers', { cache: 'no-store' }),
+    ]).then(async ([usersRes, serversRes]) => {
+      if (usersRes.ok) setTotalUsers((await usersRes.json()).length);
+      if (serversRes.ok) setTotalServers((await serversRes.json()).length);
+    });
+  }, []);
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -77,14 +87,14 @@ function OverviewTab() {
         <StatCard
           icon={<Users className="h-5 w-5" />}
           label="Total Users"
-          value={0}
+          value={totalUsers}
           accent="text-electricPurple"
           bg="bg-electricPurple/10"
         />
         <StatCard
           icon={<Globe className="h-5 w-5" />}
           label="Total Servers"
-          value={0}
+          value={totalServers}
           accent="text-blue-400"
           bg="bg-blue-400/10"
         />
@@ -123,7 +133,11 @@ function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
 
-  // TODO: on mount fetch GET /api/users → setUsers(data)
+  useEffect(() => {
+    fetch('/api/users', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setUsers);
+  }, []);
 
   const filtered = users.filter(
     (u) =>
@@ -154,15 +168,17 @@ function UsersTab() {
           <UserRow
             key={u.id}
             user={u}
-            onRoleChange={(newRole) => {
-              // TODO: call PATCH /api/users/${u.id}/role with { role: newRole }
-              setUsers((prev) =>
-                prev.map((m) => (m.id === u.id ? { ...m, role: newRole } : m))
-              );
+            onRoleChange={async (newRole) => {
+              const res = await fetch(`/api/users/${u.id}/role`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: newRole }),
+              });
+              if (res.ok) setUsers((prev) => prev.map((m) => (m.id === u.id ? { ...m, role: newRole } : m)));
             }}
-            onDelete={() => {
-              // TODO: call DELETE /api/users/${u.id}
-              setUsers((prev) => prev.filter((m) => m.id !== u.id));
+            onDelete={async () => {
+              const res = await fetch(`/api/users/${u.id}`, { method: "DELETE" });
+              if (res.ok) setUsers((prev) => prev.filter((m) => m.id !== u.id));
             }}
           />
         ))}
@@ -275,7 +291,11 @@ function ServersTab() {
   const [servers, setServers] = useState<Server[]>([]);
   const [search, setSearch] = useState("");
 
-  // TODO: on mount fetch GET /api/servers → setServers(data)
+  useEffect(() => {
+    fetch('/api/servers', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setServers);
+  }, []);
 
   const filtered = servers.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -304,9 +324,9 @@ function ServersTab() {
           <ServerRow
             key={s.id}
             server={s}
-            onDelete={() => {
-              // TODO: call DELETE /api/servers/${s.id}
-              setServers((prev) => prev.filter((m) => m.id !== s.id));
+            onDelete={async () => {
+              const res = await fetch(`/api/servers/${s.id}`, { method: "DELETE" });
+              if (res.ok) setServers((prev) => prev.filter((m) => m.id !== s.id));
             }}
           />
         ))}
