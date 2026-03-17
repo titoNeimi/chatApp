@@ -1,16 +1,18 @@
 'use client'
 
+import { useServer } from "@/context/serverContext";
 import { Room } from "@/types/room";
 import { Calendar, ChevronLeft, ChevronRight, Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useUser } from "@/context/userContext";
 
-export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: string | null, serverID: string, canManageRooms?: boolean}) {
+export function RoomGallery(params: {rooms: Room[] | null, selectedRoomID: string | null, serverID: string}) {
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useUser();
-  const {rooms, selectedRoomID, serverID, canManageRooms = false} = params
-  const canManage = user?.role === 'admin' || canManageRooms;
+  const { permissions } = useServer();
+  const {rooms, selectedRoomID, serverID} = params
+  const canManage = user?.role === 'admin' || permissions?.can_manage_rooms === true;
 
   return (
     <aside
