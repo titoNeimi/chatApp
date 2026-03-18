@@ -95,6 +95,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		server.PUT("/:serverID", serverHandler.Update, adminOnly)
 		server.DELETE("/:serverID", serverHandler.SoftDelete, adminOnly)
 		server.POST("/:serverID/join", serverHandler.JoinServer, userOrAdmin)
+		server.GET("/:serverID/stats", serverHandler.GetStats)
 
 		room := server.Group("/:serverID/room")
 		{

@@ -15,3 +15,9 @@ type Server struct {
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt
 }
+
+type ServerStats struct {
+	MemberCount int
+	RoomCount   int
+	RoleCount   int
+}

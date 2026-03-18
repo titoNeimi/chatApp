@@ -3,9 +3,11 @@ package handler
 import (
 	"chatApp/internal/adapters/input/http/dto"
 	"chatApp/internal/adapters/input/http/middleware"
+	"chatApp/internal/adapters/input/http/validation"
 	valaidation "chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -73,7 +75,7 @@ func (h *serverHandler) Create(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusCreated, server)
+	return c.JSON(http.StatusCreated, buildServerResponse(server))
 }
 func (h *serverHandler) Update(c *echo.Context) error {
 
@@ -108,7 +110,7 @@ func (h *serverHandler) Update(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, server)
+	return c.JSON(http.StatusOK, buildServerResponse(server))
 }
 
 func (h *serverHandler) SoftDelete(c *echo.Context) error {
@@ -147,7 +149,7 @@ func (h *serverHandler) GetServerByID(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, server)
+	return c.JSON(http.StatusOK, buildServerResponse(server))
 
 }
 
@@ -172,6 +174,43 @@ func (h *serverHandler) JoinServer(c *echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *serverHandler) GetStats(c *echo.Context) error {
+	serverID := c.Param("serverID")
+	if err := validation.IsValidID(serverID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	stats, err := h.serverService.GetServerStats(serverID)
+	if err != nil {
+		if errors.Is(domain.ErrServerNotFound, err) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, dto.ServerStatsResponse{
+		MemberCount: stats.MemberCount,
+		RoomCount:   stats.RoomCount,
+		RoleCount:   stats.RoleCount,
+	})
+}
+
+func buildServerResponse(s domain.Server) dto.ServerResponse {
+	var deletedAt *time.Time
+	if s.DeletedAt.Valid {
+		deletedAt = &s.DeletedAt.Time
+	}
+	return dto.ServerResponse{
+		ID:          s.ID,
+		Name:        s.Name,
+		Description: s.Description,
+		RoomIDs:     s.RoomIDs,
+		CreatedAt:   s.CreatedAt,
+		UpdatedAt:   s.UpdatedAt,
+		DeletedAt:   deletedAt,
+	}
 }
 
 func buildServerResponseList(servers []domain.Server) []dto.ServerResponse {

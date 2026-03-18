@@ -14,4 +14,5 @@ type ServerRepository interface {
 	AddUserToServer(serverID, userID string) error
 	IsUserMember(serverID, userID string) (bool, error)
 	RemoveUserFromServer(serverID, userID string) error
+	GetServerStats(serverID string) (domain.ServerStats, error)
 }

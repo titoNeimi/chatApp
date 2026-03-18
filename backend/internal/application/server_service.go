@@ -42,6 +42,10 @@ func (s *serverService) GetServerByID(serverId string) (domain.Server, error) {
 	return s.serverRepo.GetServerByID(serverId)
 }
 
+func (s *serverService) GetServerStats(serverID string) (domain.ServerStats, error) {
+	return s.serverRepo.GetServerStats(serverID)
+}
+
 func (s *serverService) JoinServer(serverID, userID string) error {
 	if _, err := s.serverRepo.GetServerByID(serverID); err != nil {
 		return err

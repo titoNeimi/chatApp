@@ -32,6 +32,12 @@ type ServerUpdateResponse struct {
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 }
 
+type ServerStatsResponse struct {
+	MemberCount int `json:"member_count"`
+	RoomCount   int `json:"room_count"`
+	RoleCount   int `json:"role_count"`
+}
+
 type ServerResponse struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`

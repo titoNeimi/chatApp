@@ -10,4 +10,5 @@ type ServerService interface {
 	SoftDelete(serverID string) error
 	GetServerByID(serverId string) (domain.Server, error)
 	JoinServer(serverID, userID string) error
+	GetServerStats(serverID string) (domain.ServerStats, error)
 }

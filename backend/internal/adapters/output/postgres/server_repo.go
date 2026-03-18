@@ -166,3 +166,32 @@ func (r *serverRepo) RemoveUserFromServer(serverID, userID string) error {
 	return r.db.Where("server_id = ? AND user_id = ?", serverID, userID).
 		Delete(&models.ServerUsers{}).Error
 }
+
+
+func (r *serverRepo) GetServerStats(serverID string) (domain.ServerStats, error) {
+	var memberCount, roomCount, roleCount int64
+
+	if err := r.db.Model(&models.ServerUsers{}).
+		Where("server_id = ?", serverID).
+		Count(&memberCount).Error; err != nil {
+		return domain.ServerStats{}, err
+	}
+
+	if err := r.db.Model(&models.Room{}).
+		Where("server_id = ? AND deleted_at IS NULL", serverID).
+		Count(&roomCount).Error; err != nil {
+		return domain.ServerStats{}, err
+	}
+
+	if err := r.db.Model(&models.ServerRoles{}).
+		Where("server_id = ?", serverID).
+		Count(&roleCount).Error; err != nil {
+		return domain.ServerStats{}, err
+	}
+
+	return domain.ServerStats{
+		MemberCount: int(memberCount),
+		RoomCount:   int(roomCount),
+		RoleCount:   int(roleCount),
+	}, nil
+}
