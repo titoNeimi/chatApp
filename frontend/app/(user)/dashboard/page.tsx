@@ -2,20 +2,20 @@
 
 import { ServerActionModal } from '@/components/serverActionModal'
 import {
-  DataCoreBar,
   DirectMessageItem,
   DMItem,
   FeaturedServerCard,
-  FeaturedServerData,
   HexAvatar,
   NewServerCard,
   QuickActionButton,
   TrendingCard,
   TrendingCardData,
 } from '@/components/dashboardComponents'
+import { useUserServers } from '@/context/userServersContext'
 import { Plus, Shield, Sparkles, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useUser } from '@/context/userContext'
 
 // ---------------------------------------------------------------------------
 // Mock data — remove once backend is connected
@@ -50,12 +50,6 @@ const MOCK_DMS: DMItem[] = [
   },
 ]
 
-// TODO: Replace with real servers fetched from /api/users/me/servers
-const MOCK_SERVERS: FeaturedServerData[] = [
-  { id: 'server1', name: 'Cyber Nexus', memberCount: '1.2K' },
-  { id: 'server2', name: 'Void Runners', memberCount: '450' },
-  { id: 'server3', name: 'Neon Garden', memberCount: '890' },
-]
 
 // TODO: Replace with real trending servers fetched from /api/servers/discover
 const MOCK_TRENDING: TrendingCardData[] = [
@@ -63,42 +57,40 @@ const MOCK_TRENDING: TrendingCardData[] = [
   { id: 'trend2', name: 'Deep Space 9', category: 'Exploration' },
 ]
 
-// TODO: Replace with real storage data from a future storage/usage API endpoint
-const MOCK_STORAGE_PERCENT = 78
-
-// ---------------------------------------------------------------------------
-// Dashboard page
-// ---------------------------------------------------------------------------
 export default function Dashboard() {
-  // TODO: Connect to UserContext — import { useUser } from '@/context/userContext'
-  //       then use: const { user } = useUser()
-  //       and replace mock user values below with user.username, user.role, etc.
-  const mockUserName = 'Voyager_7'
+  const {user, isLoading} = useUser()
   const mockUserRole = 'MASTER PROTOCOL'
-  const mockUserInitials = 'V7'
+
+  const { servers, refresh: handleServerCreated } = useUserServers()
 
   const [createServerOpen, setCreateServerOpen] = useState(false)
 
-  // TODO: After connecting to backend, call the servers refresh from the parent
-  //       layout (UserLayout) so the topbar server list updates too.
-  //       Pass onServerCreated to ServerActionModal accordingly.
-  const handleServerCreated = () => {}
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-textMed">Loading user data...</p>
+      </div>
+    )
+  }
 
-  return (
+  if (!user && !isLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-red-500">You must be logged in to view the dashboard.</p>
+      </div>
+    )
+  }
+
+  if (user && !isLoading) { return (
     <section className="flex flex-1 gap-6 text-textHigh">
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Left panel — User profile + Direct Messages                         */}
-      {/* ------------------------------------------------------------------ */}
       <aside className="flex w-72 shrink-0 flex-col gap-4">
 
         {/* Profile card */}
         <div className="flex flex-col items-center gap-3 rounded-2xl bg-surfaceNavy p-5 shadow-[0_8px_24px_var(--color-panelShadow)]">
-          {/* TODO: Pass real user avatar / image once profile pictures are supported */}
-          <HexAvatar initials={mockUserInitials} size="lg" />
+          <HexAvatar initials={user.username.slice(0,2).toUpperCase()} size="lg" />
           <div className="text-center">
-            {/* TODO: Replace mock values with data from useUser() context */}
-            <p className="text-lg font-bold text-textHigh">{mockUserName}</p>
+            {/* TODO: Replace mock tags */}
+            <p className="text-lg font-bold text-textHigh">{user.username}</p>
             <div className="mt-1.5 flex items-center justify-center gap-1 flex-wrap">
               {mockUserRole.split(' ').map((word) => (
                 <span
@@ -137,9 +129,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Center — Server constellation grid                                  */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Center — Server constellation grid*/}
       <main className="flex flex-1 flex-col gap-5">
         <div>
           <h1 className="text-3xl font-bold text-textHigh">
@@ -154,9 +144,8 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* TODO: Replace MOCK_SERVERS with real servers from /api/users/me/servers */}
-          {MOCK_SERVERS.map((server) => (
-            <FeaturedServerCard key={server.id} data={server} />
+          {servers?.map((server) => (
+            <FeaturedServerCard key={server.id} data={{ id: server.id, name: server.name }} />
           ))}
 
           {/* Opens the existing ServerActionModal to create or join a server */}
@@ -164,9 +153,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Right panel — Quick Actions, Trending, Data Core                    */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Right panel — Quick Actions, Trending, Data Core*/}
       <aside className="flex w-52 shrink-0 flex-col gap-4">
 
         {/* Quick Actions */}
@@ -212,10 +199,6 @@ export default function Dashboard() {
             Discover More
           </Link>
         </div>
-
-        {/* Data Core */}
-        {/* TODO: Replace MOCK_STORAGE_PERCENT with real usage data from backend */}
-        <DataCoreBar usedPercent={MOCK_STORAGE_PERCENT} />
       </aside>
 
       {/* Reusing the existing ServerActionModal component */}
@@ -226,4 +209,5 @@ export default function Dashboard() {
       />
     </section>
   )
+}
 }

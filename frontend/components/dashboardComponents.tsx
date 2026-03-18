@@ -8,11 +8,6 @@ import { ReactNode } from 'react'
 const PLACEHOLDER_IMAGE =
   'https://static.vecteezy.com/system/resources/previews/042/971/890/non_2x/night-sky-galaxy-cloud-with-nebula-starry-in-dark-blue-background-universe-filled-with-star-light-in-purple-pink-beautiful-nature-star-field-with-milky-way-horizon-banner-colorful-cosmos-stardust-vector.jpg'
 
-// ---------------------------------------------------------------------------
-// HexAvatar
-// Reusable hexagon-clipped avatar showing user initials.
-// Used in the profile card and DM list.
-// ---------------------------------------------------------------------------
 type HexAvatarSize = 'sm' | 'md' | 'lg'
 
 export function HexAvatar({
@@ -37,7 +32,7 @@ export function HexAvatar({
       className={`relative inline-flex shrink-0 items-center justify-center ${containerSizes[size]}`}
     >
       <span className="absolute inset-0 [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-electricPurple/40" />
-      <span className="absolute inset-[2px] [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-surfaceNavy" />
+      <span className="absolute inset-0.5 [clip-path:polygon(25%_6%,75%_6%,100%_50%,75%_94%,25%_94%,0_50%)] bg-surfaceNavy" />
       <span className={`relative z-10 font-bold text-textHigh ${textSizes[size]}`}>
         {initials}
       </span>
@@ -95,7 +90,7 @@ export function DirectMessageItem({ dm }: { dm: DMItem }) {
 export type FeaturedServerData = {
   id: string
   name: string
-  memberCount: string
+  memberCount?: string
   image?: string
 }
 
@@ -110,7 +105,7 @@ export function FeaturedServerCard({ data }: { data: FeaturedServerData }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
         {/* Card content */}
         <div className="absolute right-0 bottom-0 left-0 flex items-end justify-between p-4">
           <div>
@@ -131,10 +126,6 @@ export function FeaturedServerCard({ data }: { data: FeaturedServerData }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// NewServerCard
-// Dashed placeholder card that triggers server creation (via ServerActionModal).
-// ---------------------------------------------------------------------------
 export function NewServerCard({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -152,10 +143,6 @@ export function NewServerCard({ onClick }: { onClick: () => void }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// QuickActionButton
-// Full-width action button for the right-side Quick Actions panel.
-// ---------------------------------------------------------------------------
 type QuickActionVariant = 'primary' | 'secondary'
 
 export function QuickActionButton({
@@ -185,10 +172,6 @@ export function QuickActionButton({
   )
 }
 
-// ---------------------------------------------------------------------------
-// TrendingCard
-// Compact card with background image for the Trending section.
-// ---------------------------------------------------------------------------
 export type TrendingCardData = {
   id: string
   name: string
@@ -207,7 +190,7 @@ export function TrendingCard({ data }: { data: TrendingCardData }) {
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
         <div className="absolute right-0 bottom-0 left-0 p-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
             {data.category}
@@ -216,27 +199,5 @@ export function TrendingCard({ data }: { data: TrendingCardData }) {
         </div>
       </div>
     </Link>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// DataCoreBar
-// Storage / usage progress bar shown at the bottom of the right panel.
-// ---------------------------------------------------------------------------
-export function DataCoreBar({ usedPercent }: { usedPercent: number }) {
-  return (
-    <div className="rounded-2xl bg-surfaceNavy p-4 shadow-[0_8px_24px_var(--color-panelShadow)]">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-widest text-textMed">Data Core</p>
-        {/* TODO: Replace with real storage usage from /api/users/me or a dedicated storage endpoint */}
-        <p className="text-xs font-bold text-textHigh">{usedPercent}% Full</p>
-      </div>
-      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-deepNavy">
-        <div
-          className="h-full rounded-full bg-electricPurple shadow-[0_0_8px_var(--color-purpleGlow)] transition-all duration-500"
-          style={{ width: `${Math.min(usedPercent, 100)}%` }}
-        />
-      </div>
-    </div>
   )
 }

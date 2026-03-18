@@ -1,7 +1,7 @@
 'use client'
 
+import { useUserServers } from "@/context/userServersContext";
 import { useUser } from "@/context/userContext";
-import { Server } from "@/types/server";
 import { Bell, ChevronRight, Compass, Home, LogOut, MessageSquare, Moon, Plus, Search, Settings, Shield, Sparkles, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,8 +39,8 @@ function applyTheme(mode: ThemeMode) {
   Object.entries(selectedTheme).forEach(([k, v]) => root.style.setProperty(k, v));
 }
 
-export function Topbar(params: { servers: Server[] | null; onServerCreated: () => void }) {
-  const { servers, onServerCreated } = params;
+export function Topbar() {
+  const { servers, refresh: onServerCreated } = useUserServers();
   const { user } = useUser();
   const pathname = usePathname();
   const [theme, setTheme] = useState<ThemeMode>(() => {

@@ -1,10 +1,10 @@
 'use client'
 
 import { Topbar } from "@/components/topbar";
+import { UserServersProvider } from "@/context/userServersContext";
 import { Server } from "@/types/server";
-import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function UserLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();
@@ -34,12 +34,20 @@ export default function UserLayout({ children }: Readonly<{ children: React.Reac
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  const contextValue = useMemo(
+    () => ({ servers, refresh: fetchUserServers }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [servers]
+  );
+
   return (
-    <div className="flex flex-col min-h-screen bg-[radial-gradient(1200px_circle_at_top_left,var(--color-purpleGlow)_0%,transparent_40%),linear-gradient(180deg,var(--color-deepNavy)_0%,var(--color-surfaceNavy)_100%)]">
-      <Topbar servers={servers} onServerCreated={fetchUserServers} />
-      <div className="flex flex-1 flex-col px-5 py-6">
-        {children}
+    <UserServersProvider value={contextValue}>
+      <div className="flex flex-col min-h-screen bg-[radial-gradient(1200px_circle_at_top_left,var(--color-purpleGlow)_0%,transparent_40%),linear-gradient(180deg,var(--color-deepNavy)_0%,var(--color-surfaceNavy)_100%)]">
+        <Topbar />
+        <div className="flex flex-1 flex-col px-5 py-6">
+          {children}
+        </div>
       </div>
-    </div>
+    </UserServersProvider>
   );
 }
