@@ -11,7 +11,9 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
     return NextResponse.json({ message: "serverID and roomID are required" }, { status: 400 });
   }
 
-  const result = await authenticatedBackendRequest(request, `/message/room/${roomID}`);
+  const { searchParams } = new URL(request.url);
+  const qs = searchParams.toString();
+  const result = await authenticatedBackendRequest(request, `/message/room/${roomID}${qs ? `?${qs}` : ""}`);
   return createProxyResponse(result.backendResponse, result.tokenPair, result.clearCookies);
 }
 

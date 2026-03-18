@@ -60,10 +60,15 @@ func (r *messageRepo) UpdateContent(messageID, newContent string) error {
 
 	return nil
 }
-func (r *messageRepo) ListByRoomID(roomID string) ([]domain.Message, error) {
+func (r *messageRepo) ListByRoomID(roomID string, limit int, before *time.Time) ([]domain.Message, error) {
 	var messages []models.Message
 
-	if err := r.db.Where("room_id = ?", roomID).Order("created_at ASC").Find(&messages).Error; err != nil {
+	query := r.db.Where("room_id = ?", roomID)
+	if before != nil {
+		query = query.Where("created_at < ?", before)
+	}
+
+	if err := query.Order("created_at DESC").Limit(limit).Find(&messages).Error; err != nil {
 		return nil, err
 	}
 

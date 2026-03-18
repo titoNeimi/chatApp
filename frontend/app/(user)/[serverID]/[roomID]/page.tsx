@@ -1,6 +1,6 @@
 'use client'
 import { EffectivePermissions } from "@/types/role";
-import { Check, Paperclip, Pencil, SendHorizontal, Smile, Trash2, X } from "lucide-react";
+import { Check, ChevronUp, Paperclip, Pencil, SendHorizontal, Smile, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
@@ -11,34 +11,58 @@ type RoomMember = {
   Username: string;
 };
 
-
 type Message = {
-  ID: string;
-  Content: string;
-  UserID: string;
-  Username: string;
-  ReplyToMessageID: string | null;
-  RoomID: string;
-  CreatedAt: string;
-  UpdatedAt: string;
-  DeletedAt: string | null;
+  id: string;
+  content: string;
+  user_id: string;
+  username: string;
+  reply_to_message_id: string | null;
+  room_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
 };
 
-export default function RoomDashboardPlaceholder() {
+type RawMessage = Omit<Message, 'username'>;
+
+type MessagesPage = {
+  messages: RawMessage[];
+  has_more: boolean;
+  next_cursor: string | null;
+};
+
+function enrichMessages(raw: RawMessage[], userMap: Record<string, RoomMember>): Message[] {
+  return raw.map(msg => ({
+    ...msg,
+    username: userMap[msg.user_id]?.Username ?? msg.user_id.slice(0, 8),
+  }));
+}
+
+export default function RoomPage() {
   const { user } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [myPermissions, setMyPermissions] = useState<EffectivePermissions | null>(null);
   const [editingMessageID, setEditingMessageID] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null);
+
   const userMapRef = useRef<Record<string, RoomMember>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "instant") => {
+    bottomRef.current?.scrollIntoView({ behavior });
+  }, []);
 
   useEffect(() => {
     if (!serverID || !roomID) return;
@@ -50,15 +74,15 @@ export default function RoomDashboardPlaceholder() {
         const [membersRes, , messagesRes, permissionsRes] = await Promise.all([
           fetch(`${base}/users`),
           fetch(`${base}/me`),
-          fetch(`${base}/messages`),
+          fetch(`${base}/messages?limit=50`),
           fetch(`/api/servers/${serverID}/my-permissions?roomID=${roomID}`),
         ]);
 
         if (!membersRes.ok) throw new Error(`Failed to fetch members: ${membersRes.statusText}`);
         if (!messagesRes.ok) throw new Error(`Failed to fetch messages: ${messagesRes.statusText}`);
         if (!permissionsRes.ok) throw new Error(`Failed to fetch permissions: ${permissionsRes.statusText}`);
-        
-        const [members, rawMessages, permissions]: [RoomMember[], Omit<Message, 'Username'>[], EffectivePermissions] = await Promise.all([
+
+        const [members, page, permissions]: [RoomMember[], MessagesPage, EffectivePermissions] = await Promise.all([
           membersRes.json(),
           messagesRes.json(),
           permissionsRes.json(),
@@ -69,12 +93,9 @@ export default function RoomDashboardPlaceholder() {
         const userMap = Object.fromEntries(members.map(m => [m.UserID, m]));
         userMapRef.current = userMap;
 
-        const enriched: Message[] = rawMessages.map(msg => ({
-          ...msg,
-          Username: userMap[msg.UserID]?.Username ?? msg.UserID.slice(0, 8),
-        }));
-
-        setMessages(enriched);
+        setMessages(enrichMessages(page.messages, userMap));
+        setHasMore(page.has_more);
+        setNextCursor(page.next_cursor);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
       } finally {
@@ -85,24 +106,73 @@ export default function RoomDashboardPlaceholder() {
     fetchAll();
   }, [serverID, roomID]);
 
+  // Scroll to bottom after initial load
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      scrollToBottom();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (!nextCursor || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    const container = scrollContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight ?? 0;
+
+    try {
+      const url = new URL(`/api/servers/${serverID}/rooms/${roomID}/messages`, window.location.origin);
+      url.searchParams.set("limit", "50");
+      url.searchParams.set("before", nextCursor);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) return;
+
+      const page: MessagesPage = await res.json();
+      const enriched = enrichMessages(page.messages, userMapRef.current);
+
+      setMessages(prev => [...enriched, ...prev]);
+      setHasMore(page.has_more);
+      setNextCursor(page.next_cursor);
+
+      // Restore scroll position so the user stays at the same message
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevScrollHeight;
+        }
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore, hasMore, serverID, roomID]);
+
   const handleEvent = useCallback((event: RoomEvent) => {
     if (event.type === "message.new") {
-      setMessages((prev) => {
-        if (prev.some(m => m.ID === event.payload.ID)) return prev;
+      setMessages(prev => {
+        if (prev.some(m => m.id === event.payload.ID)) return prev;
         const enriched: Message = {
-          ...event.payload,
-          Username: userMapRef.current[event.payload.UserID]?.Username ?? event.payload.UserID.slice(0, 8),
+          id: event.payload.ID,
+          content: event.payload.Content,
+          user_id: event.payload.UserID,
+          username: userMapRef.current[event.payload.UserID]?.Username ?? event.payload.UserID.slice(0, 8),
+          reply_to_message_id: event.payload.ReplyToMessageID,
+          room_id: event.payload.RoomID,
+          created_at: event.payload.CreatedAt,
+          updated_at: event.payload.UpdatedAt,
+          deleted_at: event.payload.DeletedAt,
         };
         return [...prev, enriched];
       });
+      scrollToBottom("smooth");
     } else if (event.type === "message.update") {
-      setMessages((prev) => prev.map(m =>
-        m.ID === event.payload.ID ? { ...m, Content: event.payload.Content } : m
+      setMessages(prev => prev.map(m =>
+        m.id === event.payload.ID ? { ...m, content: event.payload.Content } : m
       ));
     } else if (event.type === "message.delete") {
-      setMessages((prev) => prev.filter(m => m.ID !== event.payload.ID));
+      setMessages(prev => prev.filter(m => m.id !== event.payload.ID));
     }
-  }, []);
+  }, [scrollToBottom]);
 
   useRoomSocket(roomID, handleEvent);
 
@@ -112,14 +182,14 @@ export default function RoomDashboardPlaceholder() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
-    setMessages((prev) => prev.map((m) => m.ID === messageID ? { ...m, Content: content } : m));
+    setMessages(prev => prev.map(m => m.id === messageID ? { ...m, content } : m));
     setEditingMessageID(null);
     setEditContent("");
   };
 
   const handleDelete = async (messageID: string) => {
     await fetch(`/api/messages/${messageID}`, { method: "DELETE" });
-    setMessages((prev) => prev.filter((m) => m.ID !== messageID));
+    setMessages(prev => prev.filter(m => m.id !== messageID));
     setConfirmDeleteID(null);
   };
 
@@ -132,6 +202,7 @@ export default function RoomDashboardPlaceholder() {
       body: JSON.stringify({ content: messageInput }),
     });
     setMessageInput("");
+    scrollToBottom("smooth");
   };
 
   if (!serverID || !roomID) {
@@ -151,7 +222,23 @@ export default function RoomDashboardPlaceholder() {
           </p>
         </header>
 
-        <div className="custom-scroll mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <div ref={scrollContainerRef} className="custom-scroll mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+
+          {/* Load more button */}
+          {hasMore && (
+            <div className="flex justify-center py-2">
+              <button
+                type="button"
+                onClick={loadMoreMessages}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 rounded-full border border-softBorder px-4 py-1.5 text-xs font-semibold text-textMed transition hover:border-electricPurple/50 hover:text-electricPurple disabled:opacity-50"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                {loadingMore ? "Loading..." : "Load older messages"}
+              </button>
+            </div>
+          )}
+
           {isLoading && (
             <p className="text-center text-sm text-textMed">Loading messages...</p>
           )}
@@ -161,24 +248,25 @@ export default function RoomDashboardPlaceholder() {
           {!isLoading && !error && messages.length === 0 && (
             <p className="text-center text-sm text-textMed">No messages yet. Be the first to send one!</p>
           )}
+
           {messages.map((message) => {
-            const canEdit = message.UserID === user?.id;
-            const canDelete = message.UserID === user?.id || user?.role === 'admin' || myPermissions?.can_delete_messages === true;
-            const isEditing = editingMessageID === message.ID;
-            const isConfirmingDelete = confirmDeleteID === message.ID;
+            const canEdit = message.user_id === user?.id;
+            const canDelete = message.user_id === user?.id || user?.role === 'admin' || myPermissions?.can_delete_messages === true;
+            const isEditing = editingMessageID === message.id;
+            const isConfirmingDelete = confirmDeleteID === message.id;
 
             return (
               <article
-                key={message.ID}
+                key={message.id}
                 className="group flex w-full items-end gap-2 justify-start sm:gap-3"
               >
-                <HexAvatar initials={message.Username.slice(0, 2).toUpperCase()} />
+                <HexAvatar initials={message.username.slice(0, 2).toUpperCase()} />
 
                 <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-textHigh">{message.Username}</span>
+                    <span className="font-semibold text-textHigh">{message.username}</span>
                     <span className="text-textMed">
-                      {new Date(message.CreatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
 
@@ -194,14 +282,14 @@ export default function RoomDashboardPlaceholder() {
                           onKeyDown={(e) => {
                             if (e.key === "Escape") { setEditingMessageID(null); setEditContent(""); }
                             if (e.key === "Enter" && editContent.trim()) {
-                              handleSaveEdit(message.ID, editContent);
+                              handleSaveEdit(message.id, editContent);
                             }
                           }}
                         />
                         <button
                           type="button"
                           disabled={!editContent.trim()}
-                          onClick={() => handleSaveEdit(message.ID, editContent)}
+                          onClick={() => handleSaveEdit(message.id, editContent)}
                           className="inline-flex h-6 w-6 items-center justify-center rounded-md text-electricPurple transition hover:bg-electricPurple/10 disabled:opacity-40"
                         >
                           <Check className="h-3.5 w-3.5" />
@@ -219,7 +307,7 @@ export default function RoomDashboardPlaceholder() {
                         <span className="text-xs text-red-400">Delete this message?</span>
                         <button
                           type="button"
-                          onClick={() => handleDelete(message.ID)}
+                          onClick={() => handleDelete(message.id)}
                           className="rounded-full bg-red-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-600"
                         >
                           Yes
@@ -234,7 +322,7 @@ export default function RoomDashboardPlaceholder() {
                       </div>
                     ) : (
                       <p className="rounded-2xl bg-deepNavy px-4 py-3 text-sm leading-relaxed text-textHigh shadow-sm sm:text-base">
-                        {message.Content}
+                        {message.content}
                       </p>
                     )}
 
@@ -243,7 +331,7 @@ export default function RoomDashboardPlaceholder() {
                         {canEdit && (
                           <button
                             type="button"
-                            onClick={() => { setEditingMessageID(message.ID); setEditContent(message.Content); }}
+                            onClick={() => { setEditingMessageID(message.id); setEditContent(message.content); }}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-electricPurple"
                             aria-label="Edit message"
                           >
@@ -253,7 +341,7 @@ export default function RoomDashboardPlaceholder() {
                         {canDelete && (
                           <button
                             type="button"
-                            onClick={() => setConfirmDeleteID(message.ID)}
+                            onClick={() => setConfirmDeleteID(message.id)}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surfaceNavy text-textMed transition hover:bg-deepNavy hover:text-red-400"
                             aria-label="Delete message"
                           >
@@ -267,6 +355,8 @@ export default function RoomDashboardPlaceholder() {
               </article>
             );
           })}
+
+          <div ref={bottomRef} />
         </div>
 
         <footer className="mt-4">
@@ -274,7 +364,7 @@ export default function RoomDashboardPlaceholder() {
             <button
               type="button"
               className="rounded-lg p-2 text-textMed transition hover:bg-surfaceNavy hover:text-textHigh"
-              aria-label="Adjuntar archivo"
+              aria-label="Attach file"
             >
               <Paperclip className="h-4 w-4" />
             </button>

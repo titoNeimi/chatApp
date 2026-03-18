@@ -4,6 +4,7 @@ import (
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
 	"chatApp/internal/ports/output"
+	"slices"
 	"time"
 )
 
@@ -36,12 +37,24 @@ func (s *MessageService) SoftDelete(messageID string) error {
 func (s *MessageService) UpdateContent(messageID, newContent string) error {
 	return s.messageRepo.UpdateContent(messageID, newContent)
 }
-func (s *MessageService) ListByRoomID(roomID string) ([]domain.Message, error) {
+func (s *MessageService) ListByRoomID(roomID string, limit int, before *time.Time) ([]domain.Message, bool, error) {
 	if _, err := s.roomRepo.GetByID(roomID); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return s.messageRepo.ListByRoomID(roomID)
+	messages, err := s.messageRepo.ListByRoomID(roomID, limit+1, before)
+	if err != nil {
+		return nil, false, err
+	}
+
+	hasMore := len(messages) > limit
+	if hasMore {
+		messages = messages[:limit]
+	}
+
+	slices.Reverse(messages)
+
+	return messages, hasMore, nil
 }
 func (s *MessageService) ListByUserID(userID string) ([]domain.Message, error) {
 	panic("Not implemented")

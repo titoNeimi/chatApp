@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v5"
 )
@@ -67,7 +69,7 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 	}
 
 	payload, err := json.Marshal(websockets.Event{
-		Type: websockets.EventMessageNew,
+		Type:    websockets.EventMessageNew,
 		Payload: message,
 	})
 	if err == nil {
@@ -162,8 +164,21 @@ func (h *MessageHandler) ListByRoomID(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	messages, err := h.messageService.ListByRoomID(roomID)
+	limit := 50
+	if s := c.QueryParam("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
 
+	var before *time.Time
+	if s := c.QueryParam("before"); s != "" {
+		if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			before = &t
+		}
+	}
+
+	messages, hasMore, err := h.messageService.ListByRoomID(roomID, limit, before)
 	if err != nil {
 		if errors.Is(err, domain.ErrRoomNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
@@ -171,7 +186,31 @@ func (h *MessageHandler) ListByRoomID(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, messages)
+	msgResponses := make([]dto.MessageResponse, 0, len(messages))
+	for _, m := range messages {
+		msgResponses = append(msgResponses, dto.MessageResponse{
+			ID:               m.ID,
+			Content:          m.Content,
+			UserID:           m.UserID,
+			ReplyToMessageID: m.ReplyToMessageID,
+			RoomID:           m.RoomID,
+			CreatedAt:        m.CreatedAt,
+			UpdatedAt:        m.UpdatedAt,
+			DeletedAt:        m.DeletedAt,
+		})
+	}
+
+	var nextCursor *string
+	if hasMore && len(messages) > 0 {
+		cursor := messages[0].CreatedAt.Format(time.RFC3339Nano)
+		nextCursor = &cursor
+	}
+
+	return c.JSON(http.StatusOK, dto.MessageListResponse{
+		Messages:   msgResponses,
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+	})
 }
 func (h *MessageHandler) ListByUserID(c *echo.Context) error {
 	return echo.NewHTTPError(http.StatusInternalServerError, "Not implemented")

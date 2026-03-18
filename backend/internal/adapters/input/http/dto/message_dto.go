@@ -35,5 +35,7 @@ type MessageResponse struct {
 }
 
 type MessageListResponse struct {
-	Messages []MessageResponse `json:"messages"`
+	Messages   []MessageResponse `json:"messages"`
+	HasMore    bool              `json:"has_more"`
+	NextCursor *string           `json:"next_cursor"`
 }
