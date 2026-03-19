@@ -45,6 +45,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	roleRepo := postgres.NewServerRoleRepo(db)
 	permissionRepo := postgres.NewPermissionRepo(db)
 	banRepo := postgres.NewServerBanRepo(db)
+	invitationRepo := postgres.NewInvitationRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -61,6 +62,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 	roleService := application.NewServerRoleService(roleRepo, banRepo, serverRepo)
 	permissionService := application.NewPermissionService(permissionRepo, roleRepo, banRepo)
+	invitationService := application.NewInvitationService(invitationRepo, serverRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -73,6 +75,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	roomHandler := NewRoomHandler(roomService)
 	roleHandler := NewServerRoleHandler(roleService)
 	permHandler := NewPermissionHandler(permissionService)
+	invitationHandler := NewInvitationHandler(invitationService, serverService)
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
@@ -136,7 +139,16 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 			bans.POST("", roleHandler.BanUser)
 			bans.DELETE("/:userID", roleHandler.UnbanUser)
 		}
+
+		invitations := server.Group("/:serverID/invitations", middleware.RequireServerMember(serverRepo))
+		{
+			invitations.GET("", invitationHandler.ListByServer)
+			invitations.POST("", invitationHandler.Create, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+			invitations.DELETE("/:invitationID", invitationHandler.Delete, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
+		}
 	}
+
+	e.POST("/invitations/:code/use", invitationHandler.Use, authMiddleware)
 
 	room := e.Group("/room", authMiddleware)
 	{

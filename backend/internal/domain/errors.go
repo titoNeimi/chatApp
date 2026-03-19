@@ -28,4 +28,7 @@ var (
 	ErrServerBanNotFound       = errors.New("server ban not found")
 	ErrUserAlreadyBanned            = errors.New("user is already banned from this server")
 	ErrPermissionOverrideNotFound   = errors.New("permission override not found")
+	ErrInvitationNotFound           = errors.New("invitation not found")
+	ErrInvitationExpired            = errors.New("invitation has expired")
+	ErrInvitationMaxUsesReached     = errors.New("invitation has reached its maximum uses")
 )
