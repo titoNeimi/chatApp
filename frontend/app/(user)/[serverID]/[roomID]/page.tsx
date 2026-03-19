@@ -93,9 +93,9 @@ export default function RoomPage() {
         const userMap = Object.fromEntries(members.map(m => [m.UserID, m]));
         userMapRef.current = userMap;
 
-        setMessages(enrichMessages(page.messages, userMap));
-        setHasMore(page.has_more);
-        setNextCursor(page.next_cursor);
+        setMessages(enrichMessages(page?.messages ?? [], userMap));
+        setHasMore(page?.has_more ?? false);
+        setNextCursor(page?.next_cursor ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
       } finally {
@@ -167,7 +167,7 @@ export default function RoomPage() {
       scrollToBottom("smooth");
     } else if (event.type === "message.update") {
       setMessages(prev => prev.map(m =>
-        m.id === event.payload.ID ? { ...m, content: event.payload.Content } : m
+        m.id === event.payload.ID ? { ...m, content: event.payload.Content, updated_at: new Date().toISOString() } : m
       ));
     } else if (event.type === "message.delete") {
       setMessages(prev => prev.filter(m => m.id !== event.payload.ID));
@@ -182,7 +182,7 @@ export default function RoomPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
     });
-    setMessages(prev => prev.map(m => m.id === messageID ? { ...m, content } : m));
+    setMessages(prev => prev.map(m => m.id === messageID ? { ...m, content, updated_at: new Date().toISOString() } : m));
     setEditingMessageID(null);
     setEditContent("");
   };
@@ -268,6 +268,9 @@ export default function RoomPage() {
                     <span className="text-textMed">
                       {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    {message.updated_at > message.created_at && (
+                      <span className="text-textMed italic">(edited)</span>
+                    )}
                   </div>
 
                   <div className="flex items-end gap-2">

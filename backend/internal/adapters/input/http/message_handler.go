@@ -114,6 +114,13 @@ func (h *MessageHandler) SoftDelete(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
+	if payload, err := json.Marshal(websockets.Event{
+		Type:    websockets.EventMessageDelete,
+		Payload: struct{ ID string }{ID: message.ID},
+	}); err == nil {
+		h.wsRegistry.Broadcast(message.RoomID, payload)
+	}
+
 	return c.JSON(http.StatusOK, fmt.Sprintf("message with the id = %s has been softDeleted", messageID))
 }
 func (h *MessageHandler) UpdateContent(c *echo.Context) error {
@@ -154,6 +161,13 @@ func (h *MessageHandler) UpdateContent(c *echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if payload, err := json.Marshal(websockets.Event{
+		Type: websockets.EventMessageUpdate,
+		Payload: struct{ID string; Content string}{ID: messageID, Content: newContent.Content},
+	}); err == nil {
+		h.wsRegistry.Broadcast(message.RoomID, payload)
 	}
 
 	return c.JSON(http.StatusOK, fmt.Sprintf("message with the id = %s content has been updated", messageID))
