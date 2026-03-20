@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
 import { useUser } from "@/context/userContext";
+import { useServer } from "@/context/serverContext";
 
 type RoomMember = {
   UserID: string;
@@ -40,6 +41,7 @@ function enrichMessages(raw: RawMessage[], userMap: Record<string, RoomMember>):
 
 export default function RoomPage() {
   const { user } = useUser();
+  const { rooms } = useServer();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -59,6 +61,7 @@ export default function RoomPage() {
   const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
+  const roomName = rooms.find(r => r.id === roomID)?.name ?? roomID;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "instant") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -218,7 +221,7 @@ export default function RoomPage() {
       <div className="relative flex h-full min-h-0 w-full flex-col rounded-2xl bg-surfaceNavy p-4 shadow-[0_20px_40px_var(--color-panelShadow)] sm:p-5">
         <header className="flex items-center gap-3 pb-3">
           <p className="text-sm font-semibold text-electricPurple">
-            #{roomID}
+            #{roomName}
           </p>
         </header>
 
