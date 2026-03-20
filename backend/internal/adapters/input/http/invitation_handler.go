@@ -95,6 +95,31 @@ func (h *invitationHandler) ListByServer(c *echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+func (h *invitationHandler) Preview(c *echo.Context) error {
+	code := c.Param("code")
+
+	inv, srv, err := h.invitationService.Preview(code)
+	if err != nil {
+		switch err {
+		case domain.ErrInvitationNotFound, domain.ErrServerNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	resp := dto.InvitationPreviewResponse{
+		Code:      inv.Code,
+		MaxUses:   inv.MaxUses,
+		Uses:      inv.Uses,
+		ExpiresAt: inv.ExpiresAt,
+	}
+	resp.Server.ID = srv.ID
+	resp.Server.Name = srv.Name
+	resp.Server.Description = srv.Description
+	return c.JSON(http.StatusOK, resp)
+}
+
 func (h *invitationHandler) Use(c *echo.Context) error {
 	code := c.Param("code")
 
@@ -103,7 +128,7 @@ func (h *invitationHandler) Use(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	inv, err := h.invitationService.Use(code)
+	inv, err := h.invitationService.Use(code, userID)
 	if err != nil {
 		switch err {
 		case domain.ErrInvitationNotFound:
@@ -112,6 +137,8 @@ func (h *invitationHandler) Use(c *echo.Context) error {
 			return echo.NewHTTPError(http.StatusGone, err.Error())
 		case domain.ErrInvitationMaxUsesReached:
 			return echo.NewHTTPError(http.StatusGone, err.Error())
+		case domain.ErrAlreadyMember:
+			return echo.NewHTTPError(http.StatusConflict, err.Error())
 		default:
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}

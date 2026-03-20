@@ -18,5 +18,6 @@ type InvitationService interface {
 	GetByID(invitationID string) (domain.Invitation, error)
 	GetByCode(code string) (domain.Invitation, error)
 	ListByServer(serverID string) ([]domain.Invitation, error)
-	Use(code string) (domain.Invitation, error)
+	Preview(code string) (domain.Invitation, domain.Server, error)
+	Use(code, userID string) (domain.Invitation, error)
 }

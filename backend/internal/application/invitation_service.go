@@ -66,10 +66,22 @@ func (s *invitationService) ListByServer(serverID string) ([]domain.Invitation, 
 	}
 	return s.invitationRepo.ListByServer(serverID)
 }
-func (s *invitationService) Use(code string) (domain.Invitation, error) {
+func (s *invitationService) Preview(code string) (domain.Invitation, domain.Server, error) {
 	i, err := s.invitationRepo.GetByCode(code)
 	if err != nil {
-		return domain.Invitation{}, err
+		return domain.Invitation{}, domain.Server{}, domain.ErrInvitationNotFound
+	}
+	srv, err := s.serverRepo.GetServerByID(i.ServerID)
+	if err != nil {
+		return domain.Invitation{}, domain.Server{}, domain.ErrServerNotFound
+	}
+	return i, srv, nil
+}
+
+func (s *invitationService) Use(code, userID string) (domain.Invitation, error) {
+	i, err := s.invitationRepo.GetByCode(code)
+	if err != nil {
+		return domain.Invitation{}, domain.ErrInvitationNotFound
 	}
 	if i.ExpiresAt != nil && i.ExpiresAt.Before(time.Now()) {
 		return domain.Invitation{}, domain.ErrInvitationExpired
@@ -77,8 +89,14 @@ func (s *invitationService) Use(code string) (domain.Invitation, error) {
 	if i.MaxUses != nil && i.Uses >= *i.MaxUses {
 		return domain.Invitation{}, domain.ErrInvitationMaxUsesReached
 	}
-	err = s.invitationRepo.IncrementUses(i.ID)
+	isMember, err := s.serverRepo.IsUserMember(i.ServerID, userID)
 	if err != nil {
+		return domain.Invitation{}, err
+	}
+	if isMember {
+		return domain.Invitation{}, domain.ErrAlreadyMember
+	}
+	if err := s.invitationRepo.IncrementUses(i.ID); err != nil {
 		return domain.Invitation{}, err
 	}
 	i.Uses = i.Uses + 1

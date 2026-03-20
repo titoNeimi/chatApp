@@ -984,19 +984,70 @@ function BanRow({ ban, onUnban }: { ban: ServerBan; onUnban: () => void }) {
 
 /* ─── Invitations ───────────────────────────────────────────────────────── */
 
-const MOCK_INVITES = [
-  { id: "1", code: "chatapp.io/invite/xK9mQp", uses: 3, maxUses: 10, expiresAt: "2026-03-18" },
-  { id: "2", code: "chatapp.io/invite/zR2vNt", uses: 0, maxUses: 1, expiresAt: "2026-03-12" },
-];
-
 function InvitationsTab() {
-  const [invites, setInvites] = useState(MOCK_INVITES);
+  const params = useParams<{ serverID: string }>();
+  const serverID = params?.serverID ?? "";
+
+  const [invites, setInvites] = useState<Invitation[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [maxUses, setMaxUses] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+
+  useEffect(() => {
+    if (!serverID) return;
+    setLoading(true);
+    fetch(`/api/servers/${serverID}/invitations`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((data: Invitation[]) => setInvites(data ?? []))
+      .catch(() => setError("Failed to load invitations."))
+      .finally(() => setLoading(false));
+  }, [serverID]);
 
   const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
+    navigator.clipboard.writeText(`${window.location.origin}/invite/${code}`);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const closeForm = () => { setShowForm(false); setMaxUses(""); setExpiresAt(""); };
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGenerating(true);
+    setError(null);
+    try {
+      const body: { max_uses?: number; expires_at?: string } = {};
+      if (maxUses.trim()) body.max_uses = parseInt(maxUses, 10);
+      if (expiresAt.trim()) body.expires_at = new Date(expiresAt).toISOString();
+
+      const r = await fetch(`/api/servers/${serverID}/invitations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error();
+      const inv: Invitation = await r.json();
+      setInvites((prev) => [...prev, inv]);
+      closeForm();
+    } catch {
+      setError("Failed to generate invitation.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    try {
+      const r = await fetch(`/api/servers/${serverID}/invitations/${id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error();
+      setInvites((prev) => prev.filter((i) => i.id !== id));
+    } catch {
+      setError("Failed to revoke invitation.");
+    }
   };
 
   return (
@@ -1007,6 +1058,7 @@ function InvitationsTab() {
         </span>
         <button
           type="button"
+          onClick={() => showForm ? closeForm() : setShowForm(true)}
           className="inline-flex items-center gap-2 rounded-full bg-electricPurple px-4 py-2 text-sm font-semibold text-white shadow-[0_0_12px_var(--color-purpleGlow)] transition hover:opacity-90"
         >
           <Link2 className="h-4 w-4" />
@@ -1014,42 +1066,104 @@ function InvitationsTab() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {invites.map((invite) => (
-          <div key={invite.id} className="flex items-center gap-3 rounded-xl bg-deepNavy px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surfaceNavy text-electricPurple">
-              <Link2 className="h-4 w-4" />
+      {showForm && (
+        <form
+          onSubmit={handleGenerate}
+          className="flex flex-col gap-3 rounded-xl border border-softBorder bg-deepNavy p-4"
+        >
+          <div className="flex gap-3">
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-textMed">
+                Max Uses
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Unlimited"
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)}
+                className="w-full rounded-lg border border-softBorder bg-surfaceNavy px-3 py-2 text-sm text-textHigh placeholder:text-textMed/50 outline-none transition focus:border-electricPurple focus:shadow-[0_0_0_2px_var(--color-purpleGlow)]"
+              />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-sm font-semibold text-textHigh">{invite.code}</p>
-              <p className="text-xs text-textMed">
-                {invite.uses}/{invite.maxUses} uses · expires {invite.expiresAt}
-              </p>
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-textMed">
+                Expires At
+              </label>
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="w-full rounded-lg border border-softBorder bg-surfaceNavy px-3 py-2 text-sm text-textHigh outline-none transition focus:border-electricPurple focus:shadow-[0_0_0_2px_var(--color-purpleGlow)]"
+              />
             </div>
+          </div>
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => handleCopy(invite.code)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMed transition hover:bg-surfaceNavy hover:text-textHigh"
-              aria-label="Copy link"
+              onClick={closeForm}
+              className="rounded-full px-4 py-1.5 text-sm text-textMed transition hover:text-textHigh"
             >
-              {copied === invite.code ? (
-                <span className="text-[10px] font-bold text-electricPurple">✓</span>
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              Cancel
             </button>
             <button
-              type="button"
-              onClick={() => setInvites((prev) => prev.filter((i) => i.id !== invite.id))}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMed transition hover:bg-red-500/10 hover:text-red-400"
-              aria-label="Revoke invite"
+              type="submit"
+              disabled={generating}
+              className="inline-flex items-center gap-2 rounded-full bg-electricPurple px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              <X className="h-3.5 w-3.5" />
+              {generating ? (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : null}
+              Create
             </button>
           </div>
-        ))}
-        {invites.length === 0 && (
-          <p className="text-sm text-textMed">No active invite links.</p>
+        </form>
+      )}
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <div className="flex flex-col gap-2">
+        {loading ? (
+          <p className="text-sm text-textMed">Loading...</p>
+        ) : (
+          <>
+            {invites.map((invite) => (
+              <div key={invite.id} className="flex items-center gap-3 rounded-xl bg-deepNavy px-4 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surfaceNavy text-electricPurple">
+                  <Link2 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-sm font-semibold text-textHigh">{invite.code}</p>
+                  <p className="text-xs text-textMed">
+                    {invite.uses}{invite.max_uses != null ? `/${invite.max_uses}` : ""} uses
+                    {invite.expires_at ? ` · expires ${new Date(invite.expires_at).toLocaleDateString()}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(invite.code)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMed transition hover:bg-surfaceNavy hover:text-textHigh"
+                  aria-label="Copy link"
+                >
+                  {copied === invite.code ? (
+                    <span className="text-[10px] font-bold text-electricPurple">✓</span>
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRevoke(invite.id)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMed transition hover:bg-red-500/10 hover:text-red-400"
+                  aria-label="Revoke invite"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            {invites.length === 0 && (
+              <p className="text-sm text-textMed">No active invite links.</p>
+            )}
+          </>
         )}
       </div>
     </div>

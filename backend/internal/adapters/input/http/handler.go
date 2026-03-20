@@ -148,6 +148,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		}
 	}
 
+	e.GET("/invitations/:code", invitationHandler.Preview, authMiddleware)
 	e.POST("/invitations/:code/use", invitationHandler.Use, authMiddleware)
 
 	room := e.Group("/room", authMiddleware)

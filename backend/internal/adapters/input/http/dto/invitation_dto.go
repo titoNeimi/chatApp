@@ -17,3 +17,15 @@ type InvitationResponse struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
 }
+
+type InvitationPreviewResponse struct {
+	Code      string     `json:"code"`
+	MaxUses   *int       `json:"max_uses,omitempty"`
+	Uses      int        `json:"uses"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	Server    struct {
+		ID          string  `json:"id"`
+		Name        string  `json:"name"`
+		Description *string `json:"description,omitempty"`
+	} `json:"server"`
+}

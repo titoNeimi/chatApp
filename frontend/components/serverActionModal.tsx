@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Link2, Plus } from "lucide-react";
 import { useState } from "react";
+import { useUserServers } from "@/context/userServersContext";
 import { Modal } from "./modal";
 
 type View = "pick" | "create" | "join";
@@ -51,7 +52,6 @@ function PickView({ onSelect }: { onSelect: (v: View) => void }) {
           title="Join with a Link"
           description="Have an invite link? Jump right in."
           onClick={() => onSelect("join")}
-          disabled
         />
       </div>
     </div>
@@ -178,12 +178,39 @@ function CreateView({ onBack, onClose, onServerCreated }: { onBack: () => void; 
 }
 
 function JoinView({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+  const { refresh } = useUserServers();
   const [link, setLink] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const extractCode = (value: string): string => {
+    const match = value.trim().match(/\/invite\/([A-Za-z0-9]+)\s*$/);
+    return match ? match[1] : value.trim();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire up join-by-link API call
-    onClose();
+    const code = extractCode(link);
+    if (!code) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/invitations/${code}/use`, { method: "POST" });
+      if (r.status === 410) {
+        setError("This invite link has expired or reached its maximum uses.");
+        return;
+      }
+      if (!r.ok) {
+        setError("Invalid invite link.");
+        return;
+      }
+      onClose();
+      await refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -199,15 +226,15 @@ function JoinView({ onBack, onClose }: { onBack: () => void; onClose: () => void
         </button>
         <div>
           <h2 className="text-xl font-bold text-textHigh">Join with a Link</h2>
-          <p className="text-sm text-textMed">Paste your invite link below.</p>
+          <p className="text-sm text-textMed">Paste your invite link or code below.</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Invite Link" required>
+        <Field label="Invite Link or Code" required>
           <input
             type="text"
-            placeholder="https://chatapp.com/invite/abc123"
+            placeholder="https://…/invite/aBcD1234 or aBcD1234"
             required
             value={link}
             onChange={(e) => setLink(e.target.value)}
@@ -215,12 +242,21 @@ function JoinView({ onBack, onClose }: { onBack: () => void; onClose: () => void
           />
         </Field>
 
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
         <button
           type="submit"
-          disabled={!link.trim()}
+          disabled={!link.trim() || loading}
           className="mt-1 w-full rounded-full bg-electricPurple py-2.5 text-sm font-semibold text-white shadow-[0_0_16px_var(--color-purpleGlow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Join Server
+          {loading ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Joining...
+            </div>
+          ) : (
+            "Join Server"
+          )}
         </button>
       </form>
     </div>

@@ -31,4 +31,5 @@ var (
 	ErrInvitationNotFound           = errors.New("invitation not found")
 	ErrInvitationExpired            = errors.New("invitation has expired")
 	ErrInvitationMaxUsesReached     = errors.New("invitation has reached its maximum uses")
+	ErrAlreadyMember                = errors.New("user is already a member of this server")
 )
