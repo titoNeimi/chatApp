@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
+	echoMiddleware "github.com/labstack/echo/v5/middleware"
 	"gorm.io/gorm"
 )
 
@@ -29,6 +30,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func SetUpRouter(e *echo.Echo, db *gorm.DB) {
+	e.Use(echoMiddleware.Recover())
 	e.Use(middleware.RequestLogger())
 
 	e.Validator = &CustomValidator{validator: validator.New()}

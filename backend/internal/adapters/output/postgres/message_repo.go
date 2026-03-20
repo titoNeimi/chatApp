@@ -80,7 +80,18 @@ func (r *messageRepo) ListByRoomID(roomID string, limit int, before *time.Time) 
 	return messageDomain, nil
 }
 func (r *messageRepo) ListByUserID(userID string) ([]domain.Message, error) {
-	panic("not implemented")
+	var messages []models.Message
+
+	if err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&messages).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.Message, 0, len(messages))
+	for _, m := range messages {
+		result = append(result, *m.ToDomain())
+	}
+
+	return result, nil
 }
 func (r *messageRepo) GetByID(messageID string) (domain.Message, error) {
 	var message models.Message

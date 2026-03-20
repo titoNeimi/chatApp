@@ -57,7 +57,7 @@ func (s *MessageService) ListByRoomID(roomID string, limit int, before *time.Tim
 	return messages, hasMore, nil
 }
 func (s *MessageService) ListByUserID(userID string) ([]domain.Message, error) {
-	panic("Not implemented")
+	return s.messageRepo.ListByUserID(userID)
 }
 func (s *MessageService) GetByID(messageID string) (domain.Message, error) {
 	return s.messageRepo.GetByID(messageID)

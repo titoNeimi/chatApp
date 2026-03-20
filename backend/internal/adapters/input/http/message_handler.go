@@ -227,7 +227,31 @@ func (h *MessageHandler) ListByRoomID(c *echo.Context) error {
 	})
 }
 func (h *MessageHandler) ListByUserID(c *echo.Context) error {
-	return echo.NewHTTPError(http.StatusInternalServerError, "Not implemented")
+	userID := c.Param("userID")
+	if err := validation.IsValidID(userID); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	messages, err := h.messageService.ListByUserID(userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	msgResponses := make([]dto.MessageResponse, 0, len(messages))
+	for _, m := range messages {
+		msgResponses = append(msgResponses, dto.MessageResponse{
+			ID:               m.ID,
+			Content:          m.Content,
+			UserID:           m.UserID,
+			ReplyToMessageID: m.ReplyToMessageID,
+			RoomID:           m.RoomID,
+			CreatedAt:        m.CreatedAt,
+			UpdatedAt:        m.UpdatedAt,
+			DeletedAt:        m.DeletedAt,
+		})
+	}
+
+	return c.JSON(http.StatusOK, msgResponses)
 }
 func (h *MessageHandler) GetByID(c *echo.Context) error {
 	messageID := c.Param("messageID")
