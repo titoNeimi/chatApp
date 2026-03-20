@@ -35,7 +35,9 @@ func (s *serverService) Update(serverID string, updates map[string]interface{}) 
 	return s.serverRepo.Update(serverID, updates)
 }
 func (s *serverService) SoftDelete(serverID string) error {
-	//Todo: Make soft delete to Rooms, Message
+	if err := s.roomRepo.SoftDeleteByServerID(serverID); err != nil {
+		return err
+	}
 	return s.serverRepo.SoftDelete(serverID)
 }
 func (s *serverService) GetServerByID(serverId string) (domain.Server, error) {

@@ -65,6 +65,9 @@ func (r *RoomRepo) SoftDelete(roomID string) error {
 	}
 	return nil
 }
+func (r *RoomRepo) SoftDeleteByServerID(serverID string) error {
+	return r.db.Where("server_id = ?", serverID).Delete(&models.Room{}).Error
+}
 
 func (r *RoomRepo) ListByServer(serverID string) ([]domain.Room, error) {
 	var rooms []models.Room
