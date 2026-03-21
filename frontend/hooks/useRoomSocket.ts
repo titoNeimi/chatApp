@@ -18,6 +18,10 @@ export type RoomEvent =
 
 
 
+const BASE_DELAY = 1000
+const MAX_DELAY = 30000
+const MAX_ATTEMPTS = 10
+
 export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => void) => {
   const onEventRef = useRef(onEvent)
 
@@ -30,6 +34,8 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
 
     let ws: WebSocket
     let cancelled = false
+    let attempt = 0
+    let retryTimeout: ReturnType<typeof setTimeout>
 
     const connect = async () => {
       const res = await fetch("/api/auth/token")
@@ -46,12 +52,28 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
         const event = JSON.parse(e.data) as RoomEvent
         onEventRef.current(event)
       }
+
+      ws.onopen = () => {
+        attempt = 0
+      }
+
+      ws.onerror = () => {
+        ws.close()
+      }
+
+      ws.onclose = () => {
+        if (cancelled || attempt >= MAX_ATTEMPTS) return
+        const delay = Math.min(BASE_DELAY * 2 ** attempt, MAX_DELAY)
+        attempt++
+        retryTimeout = setTimeout(connect, delay)
+      }
     }
 
     connect()
 
     return () => {
       cancelled = true
+      clearTimeout(retryTimeout)
       ws?.close()
     }
   }, [roomID])
