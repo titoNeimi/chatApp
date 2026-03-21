@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"chatApp/internal/adapters/output/postgres/models"
@@ -23,51 +23,44 @@ func ConnectDB() *gorm.DB {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 
-	if err := db.AutoMigrate(&models.User{}); err != nil {
-		log.Fatal(err)
+	migrations := []struct {
+		name  string
+		model any
+	}{
+		{"User", &models.User{}},
+		{"Server", &models.Server{}},
+		{"Room", &models.Room{}},
+		{"Message", &models.Message{}},
+		{"RoomUsers", &models.RoomUsers{}},
+		{"RefreshToken", &models.RefreshToken{}},
+		{"ServerUsers", &models.ServerUsers{}},
+		{"ServerRoles", &models.ServerRoles{}},
+		{"ServerUserRoles", &models.ServerUserRoles{}},
+		{"RoomPermissionOverrides", &models.RoomPermissionOverrides{}},
+		{"Invitation", &models.Invitation{}},
 	}
-	if err := db.AutoMigrate(&models.Server{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.Room{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.Message{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.RoomUsers{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.RefreshToken{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.ServerUsers{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.ServerRoles{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.ServerUserRoles{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.RoomPermissionOverrides{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := db.AutoMigrate(&models.Invitation{}); err != nil {
-		log.Fatal(err)
+
+	for _, m := range migrations {
+		if err := db.AutoMigrate(m.model); err != nil {
+			slog.Error("failed to migrate model", "model", m.name, "error", err)
+			os.Exit(1)
+		}
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to get sql.DB from gorm", "error", err)
+		os.Exit(1)
 	}
 	if err := sqlDB.Ping(); err != nil {
-		log.Fatal(err)
+		slog.Error("database ping failed", "error", err)
+		os.Exit(1)
 	}
 
-	fmt.Println("Base de datos iniciada con exito")
+	slog.Info("database connected successfully")
 	return db
 }

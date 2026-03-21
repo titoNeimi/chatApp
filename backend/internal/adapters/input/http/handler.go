@@ -9,6 +9,7 @@ import (
 	"chatApp/internal/domain"
 	"chatApp/internal/infrastructure/config"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -51,7 +52,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
-		e.Logger.Error("failed to load auth config", "error", err)
+		slog.Error("failed to load auth config", "error", err)
 		return
 	}
 	tokenProvider := jwtAdapter.NewTokenProvider(authConfig)
@@ -192,6 +193,6 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	}
 
 	if err := e.Start(fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))); err != nil {
-		e.Logger.Error("failed to start server", "error", err)
+		slog.Error("failed to start server", "error", err)
 	}
 }
