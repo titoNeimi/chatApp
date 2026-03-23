@@ -5,6 +5,7 @@ type EffectivePermissions struct {
 	CanMuteMembers    bool
 	CanManageMembers  bool
 	CanManageRooms    bool
+	CanSendMessages   bool
 }
 
 func (p EffectivePermissions) HasPermission(perm string) bool {
@@ -17,6 +18,8 @@ func (p EffectivePermissions) HasPermission(perm string) bool {
 		return p.CanManageMembers
 	case PermManageRooms:
 		return p.CanManageRooms
+	case PermSendMessages:
+		return p.CanSendMessages
 	default:
 		return false
 	}

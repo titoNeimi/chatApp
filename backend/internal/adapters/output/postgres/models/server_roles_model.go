@@ -14,6 +14,7 @@ type ServerRoles struct {
 	CanMuteMembers    bool      `gorm:"default:false;not null"`
 	CanManageMembers  bool      `gorm:"default:false;not null"`
 	CanManageRooms    bool      `gorm:"default:false;not null"`
+	CanSendMessages   bool      `gorm:"default:false;not null"`
 	CreatedAt         time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt         time.Time `gorm:"column:updated_at;not null"`
 }
@@ -34,6 +35,7 @@ func ServerRoleFromDomain(r *domain.ServerRole) *ServerRoles {
 		CanMuteMembers:    r.CanMuteMembers,
 		CanManageMembers:  r.CanManageMembers,
 		CanManageRooms:    r.CanManageRooms,
+		CanSendMessages:   r.CanSendMessages,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
 	}
@@ -51,6 +53,7 @@ func (m *ServerRoles) ToDomain() *domain.ServerRole {
 		CanMuteMembers:    m.CanMuteMembers,
 		CanManageMembers:  m.CanManageMembers,
 		CanManageRooms:    m.CanManageRooms,
+		CanSendMessages:   m.CanSendMessages,
 		CreatedAt:         m.CreatedAt,
 		UpdatedAt:         m.UpdatedAt,
 	}

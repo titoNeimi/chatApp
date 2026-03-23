@@ -11,6 +11,7 @@ type RoomPermissionOverride struct {
 	CanMuteMembers    *bool
 	CanManageMembers  *bool
 	CanManageRooms    *bool
+	CanSendMessages   *bool
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

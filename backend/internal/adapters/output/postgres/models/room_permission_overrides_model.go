@@ -17,6 +17,7 @@ type RoomPermissionOverrides struct {
 	CanMuteMembers    *bool
 	CanManageMembers  *bool
 	CanManageRooms    *bool
+	CanSendMessages   *bool
 	CreatedAt         time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt         time.Time `gorm:"column:updated_at;not null"`
 }
@@ -38,6 +39,7 @@ func RoomPermissionOverrideFromDomain(o *domain.RoomPermissionOverride) *RoomPer
 		CanMuteMembers:    o.CanMuteMembers,
 		CanManageMembers:  o.CanManageMembers,
 		CanManageRooms:    o.CanManageRooms,
+		CanSendMessages:   o.CanSendMessages,
 		CreatedAt:         o.CreatedAt,
 		UpdatedAt:         o.UpdatedAt,
 	}
@@ -56,6 +58,7 @@ func (m *RoomPermissionOverrides) ToDomain() *domain.RoomPermissionOverride {
 		CanMuteMembers:    m.CanMuteMembers,
 		CanManageMembers:  m.CanManageMembers,
 		CanManageRooms:    m.CanManageRooms,
+		CanSendMessages:   m.CanSendMessages,
 		CreatedAt:         m.CreatedAt,
 		UpdatedAt:         m.UpdatedAt,
 	}

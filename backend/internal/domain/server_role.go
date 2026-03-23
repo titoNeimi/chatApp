@@ -7,6 +7,7 @@ const (
 	PermMuteMembers    = "can_mute_members"
 	PermManageMembers  = "can_manage_members"
 	PermManageRooms    = "can_manage_rooms"
+	PermSendMessages   = "can_send_messages"
 )
 
 type ServerRole struct {
@@ -17,6 +18,7 @@ type ServerRole struct {
 	CanMuteMembers    bool
 	CanManageMembers  bool
 	CanManageRooms    bool
+	CanSendMessages   bool
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

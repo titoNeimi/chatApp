@@ -29,6 +29,7 @@ func (r *PermissionService) ResolvePermissions(serverID, roomID, userID string) 
 		perms.CanMuteMembers = perms.CanMuteMembers || role.CanMuteMembers
 		perms.CanManageMembers = perms.CanManageMembers || role.CanManageMembers
 		perms.CanManageRooms = perms.CanManageRooms || role.CanManageRooms
+		perms.CanSendMessages = perms.CanSendMessages || role.CanSendMessages
 	}
 
 	//no room context — return server-level permissions as-is
@@ -61,6 +62,9 @@ func (r *PermissionService) ResolvePermissions(serverID, roomID, userID string) 
 			if o.CanManageRooms != nil {
 				perms.CanManageRooms = perms.CanManageRooms || *o.CanManageRooms
 			}
+			if o.CanSendMessages != nil {
+				perms.CanSendMessages = perms.CanSendMessages || *o.CanSendMessages
+			}
 		}
 	}
 
@@ -81,6 +85,9 @@ func (r *PermissionService) ResolvePermissions(serverID, roomID, userID string) 
 		}
 		if userOverride.CanManageRooms != nil {
 			perms.CanManageRooms = *userOverride.CanManageRooms
+		}
+		if userOverride.CanSendMessages != nil {
+			perms.CanSendMessages = *userOverride.CanSendMessages
 		}
 	}
 

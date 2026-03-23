@@ -10,6 +10,7 @@ type CreateRoleRequest struct {
 	CanMuteMembers    bool   `json:"can_mute_members"`
 	CanManageMembers  bool   `json:"can_manage_members"`
 	CanManageRooms    bool   `json:"can_manage_rooms"`
+	CanSendMessages   bool   `json:"can_send_messages"`
 }
 
 type UpdateRoleRequest struct {
@@ -18,6 +19,7 @@ type UpdateRoleRequest struct {
 	CanMuteMembers    *bool   `json:"can_mute_members,omitempty"`
 	CanManageMembers  *bool   `json:"can_manage_members,omitempty"`
 	CanManageRooms    *bool   `json:"can_manage_rooms,omitempty"`
+	CanSendMessages   *bool   `json:"can_send_messages,omitempty"`
 }
 
 type RoleResponse struct {
@@ -28,6 +30,7 @@ type RoleResponse struct {
 	CanMuteMembers    bool      `json:"can_mute_members"`
 	CanManageMembers  bool      `json:"can_manage_members"`
 	CanManageRooms    bool      `json:"can_manage_rooms"`
+	CanSendMessages   bool      `json:"can_send_messages"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -55,6 +58,16 @@ type BanResponse struct {
 	BannedAt time.Time `json:"banned_at"`
 }
 
+// --- Effective Permissions ---
+
+type EffectivePermissionsResponse struct {
+	CanDeleteMessages bool `json:"can_delete_messages"`
+	CanMuteMembers    bool `json:"can_mute_members"`
+	CanManageMembers  bool `json:"can_manage_members"`
+	CanManageRooms    bool `json:"can_manage_rooms"`
+	CanSendMessages   bool `json:"can_send_messages"`
+}
+
 // --- Room Permission Override ---
 
 type UpsertOverrideRequest struct {
@@ -64,6 +77,7 @@ type UpsertOverrideRequest struct {
 	CanMuteMembers    *bool   `json:"can_mute_members,omitempty"`
 	CanManageMembers  *bool   `json:"can_manage_members,omitempty"`
 	CanManageRooms    *bool   `json:"can_manage_rooms,omitempty"`
+	CanSendMessages   *bool   `json:"can_send_messages,omitempty"`
 }
 
 type OverrideResponse struct {
@@ -75,6 +89,7 @@ type OverrideResponse struct {
 	CanMuteMembers    *bool     `json:"can_mute_members,omitempty"`
 	CanManageMembers  *bool     `json:"can_manage_members,omitempty"`
 	CanManageRooms    *bool     `json:"can_manage_rooms,omitempty"`
+	CanSendMessages   *bool     `json:"can_send_messages,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

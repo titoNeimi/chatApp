@@ -29,6 +29,7 @@ func roleToResponse(r domain.ServerRole) dto.RoleResponse {
 		CanMuteMembers:    r.CanMuteMembers,
 		CanManageMembers:  r.CanManageMembers,
 		CanManageRooms:    r.CanManageRooms,
+		CanSendMessages:   r.CanSendMessages,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
 	}
@@ -53,6 +54,7 @@ func (h *serverRoleHandler) CreateRole(c *echo.Context) error {
 		CanMuteMembers:    body.CanMuteMembers,
 		CanManageMembers:  body.CanManageMembers,
 		CanManageRooms:    body.CanManageRooms,
+		CanSendMessages:   body.CanSendMessages,
 	}
 
 	role, err := h.roleService.CreateRole(serverID, body.Name, perms)

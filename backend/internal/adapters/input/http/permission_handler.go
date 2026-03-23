@@ -30,6 +30,7 @@ func overrideToResponse(o domain.RoomPermissionOverride) dto.OverrideResponse {
 		CanMuteMembers:    o.CanMuteMembers,
 		CanManageMembers:  o.CanManageMembers,
 		CanManageRooms:    o.CanManageRooms,
+		CanSendMessages:   o.CanSendMessages,
 		CreatedAt:         o.CreatedAt,
 		UpdatedAt:         o.UpdatedAt,
 	}
@@ -57,6 +58,7 @@ func (h *permissionHandler) UpsertOverride(c *echo.Context) error {
 		CanMuteMembers:    body.CanMuteMembers,
 		CanManageMembers:  body.CanManageMembers,
 		CanManageRooms:    body.CanManageRooms,
+		CanSendMessages:   body.CanSendMessages,
 	}
 
 	result, err := h.permService.UpsertRoomOverride(override)
@@ -101,7 +103,13 @@ func (h *permissionHandler) GetMyPermissions(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 
-	return c.JSON(http.StatusOK, perms)
+	return c.JSON(http.StatusOK, dto.EffectivePermissionsResponse{
+		CanDeleteMessages: perms.CanDeleteMessages,
+		CanMuteMembers:    perms.CanMuteMembers,
+		CanManageMembers:  perms.CanManageMembers,
+		CanManageRooms:    perms.CanManageRooms,
+		CanSendMessages:   perms.CanSendMessages,
+	})
 }
 
 func (h *permissionHandler) ListOverrides(c *echo.Context) error {
