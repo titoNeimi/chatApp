@@ -5,6 +5,16 @@ type RouteContext = {
   params: Promise<{ serverID: string; roleID: string }>;
 };
 
+export async function GET(request: NextRequest, context: RouteContext): Promise<NextResponse> {
+  const { serverID, roleID } = await context.params;
+  if (!serverID || !roleID) {
+    return NextResponse.json({ message: "serverID and roleID are required" }, { status: 400 });
+  }
+
+  const result = await authenticatedBackendRequest(request, `/server/${serverID}/roles/${roleID}`);
+  return createProxyResponse(result.backendResponse, result.tokenPair, result.clearCookies);
+}
+
 export async function PUT(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   const { serverID, roleID } = await context.params;
   if (!serverID || !roleID) {

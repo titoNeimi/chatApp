@@ -3,7 +3,7 @@
 import { useServer } from "@/context/serverContext";
 import { useUser } from "@/context/userContext";
 import { Room } from "@/types/room";
-import { ServerBan, ServerRole, UserWithRoles } from "@/types/role";
+import { RoomPermissionOverride, ServerBan, ServerRole, UserWithRoles } from "@/types/role";
 import {
   AlertTriangle,
   Ban,
@@ -11,6 +11,7 @@ import {
   Hash,
   Link2,
   Lock,
+  MessageSquare,
   Pencil,
   Plus,
   Shield,
@@ -312,6 +313,7 @@ function RolesTab({ serverID }: { serverID: string }) {
 }
 
 type PermFields = {
+  can_send_messages: boolean;
   can_delete_messages: boolean;
   can_mute_members: boolean;
   can_manage_members: boolean;
@@ -334,10 +336,11 @@ function RoleRow({
   onDeleteCancel: () => void;
 }) {
   const PERM_BADGES: { key: keyof PermFields; icon: React.ReactNode; label: string }[] = [
-    { key: "can_delete_messages", icon: <Trash2 className="h-3 w-3" />, label: "Delete Messages" },
-    { key: "can_mute_members", icon: <VolumeX className="h-3 w-3" />, label: "Mute Members" },
-    { key: "can_manage_members", icon: <Users className="h-3 w-3" />, label: "Manage Members" },
-    { key: "can_manage_rooms", icon: <Hash className="h-3 w-3" />, label: "Manage Rooms" },
+    { key: "can_send_messages",   icon: <MessageSquare className="h-3 w-3" />, label: "Send Messages" },
+    { key: "can_delete_messages", icon: <Trash2 className="h-3 w-3" />,        label: "Delete Messages" },
+    { key: "can_mute_members",    icon: <VolumeX className="h-3 w-3" />,       label: "Mute Members" },
+    { key: "can_manage_members",  icon: <Users className="h-3 w-3" />,         label: "Manage Members" },
+    { key: "can_manage_rooms",    icon: <Hash className="h-3 w-3" />,          label: "Manage Rooms" },
   ];
 
   return (
@@ -420,6 +423,7 @@ function RoleForm({
 }) {
   const [name, setName] = useState(initialName);
   const [perms, setPerms] = useState<PermFields>({
+    can_send_messages: initialPerms?.can_send_messages ?? false,
     can_delete_messages: initialPerms?.can_delete_messages ?? false,
     can_mute_members: initialPerms?.can_mute_members ?? false,
     can_manage_members: initialPerms?.can_manage_members ?? false,
@@ -427,10 +431,11 @@ function RoleForm({
   });
 
   const PERM_LABELS: { key: keyof PermFields; label: string; desc: string }[] = [
+    { key: "can_send_messages",   label: "Send Messages",   desc: "Can send messages in read-only rooms." },
     { key: "can_delete_messages", label: "Delete Messages", desc: "Can delete any message in the server." },
-    { key: "can_mute_members", label: "Mute Members", desc: "Can mute members in rooms." },
-    { key: "can_manage_members", label: "Manage Members", desc: "Can assign/revoke roles and ban users." },
-    { key: "can_manage_rooms", label: "Manage Rooms", desc: "Can create, edit, and delete rooms." },
+    { key: "can_mute_members",    label: "Mute Members",    desc: "Can mute members in rooms." },
+    { key: "can_manage_members",  label: "Manage Members",  desc: "Can assign/revoke roles and ban users." },
+    { key: "can_manage_rooms",    label: "Manage Rooms",    desc: "Can create, edit, and delete rooms." },
   ];
 
   return (
@@ -671,6 +676,7 @@ function RoomsTab({ serverID }: { serverID: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null);
+  const [permissionsRoomID, setPermissionsRoomID] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -725,37 +731,49 @@ function RoomsTab({ serverID }: { serverID: string }) {
       {loading && <p className="text-sm text-textMed">Loading rooms...</p>}
 
       <div className="flex flex-col gap-2">
-        {rooms.map((room) =>
-          editingRoom?.id === room.id ? (
-            <RoomForm
-              key={room.id}
-              title="Edit Room"
-              initialName={room.name}
-              initialDescription={room.description}
-              initialPrivate={room.is_private}
-              onCancel={() => setEditingRoom(null)}
-              onSubmit={async (data) => {
-                const res = await fetch(`/api/servers/${serverID}/rooms/${room.id}`, {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(data),
-                });
-                if (res.ok) { const updated = await res.json(); setRooms((prev) => prev.map((r) => r.id === room.id ? updated : r)); refreshRooms(); }
-                setEditingRoom(null);
-              }}
-            />
-          ) : (
-            <RoomRow
-              key={room.id}
-              room={room}
-              confirmDelete={confirmDeleteID === room.id}
-              onEdit={() => setEditingRoom(room)}
-              onDeleteRequest={() => setConfirmDeleteID(room.id)}
-              onDeleteConfirm={() => handleDelete(room.id)}
-              onDeleteCancel={() => setConfirmDeleteID(null)}
-            />
-          )
-        )}
+        {rooms.map((room) => (
+          <div key={room.id} className="flex flex-col gap-1">
+            {editingRoom?.id === room.id ? (
+              <RoomForm
+                title="Edit Room"
+                initialName={room.name}
+                initialDescription={room.description}
+                initialPrivate={room.is_private}
+                initialReadOnly={room.is_read_only}
+                onCancel={() => setEditingRoom(null)}
+                onSubmit={async (data) => {
+                  const res = await fetch(`/api/servers/${serverID}/rooms/${room.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                  });
+                  if (res.ok) {
+                    const updated = await res.json();
+                    setRooms((prev) => prev.map((r) => r.id === room.id ? updated : r));
+                    refreshRooms();
+                    setEditingRoom(null);
+                  } else {
+                    alert("Failed to update room. You may not have permission.");
+                  }
+                }}
+              />
+            ) : (
+              <RoomRow
+                room={room}
+                confirmDelete={confirmDeleteID === room.id}
+                permissionsOpen={permissionsRoomID === room.id}
+                onEdit={() => { setEditingRoom(room); setPermissionsRoomID(null); }}
+                onDeleteRequest={() => setConfirmDeleteID(room.id)}
+                onDeleteConfirm={() => handleDelete(room.id)}
+                onDeleteCancel={() => setConfirmDeleteID(null)}
+                onPermissionsToggle={() => setPermissionsRoomID(permissionsRoomID === room.id ? null : room.id)}
+              />
+            )}
+            {permissionsRoomID === room.id && editingRoom?.id !== room.id && (
+              <OverridesPanel serverID={serverID} roomID={room.id} />
+            )}
+          </div>
+        ))}
         {!loading && rooms.length === 0 && !showCreate && (
           <p className="text-sm text-textMed">No rooms yet. Create one above.</p>
         )}
@@ -767,25 +785,34 @@ function RoomsTab({ serverID }: { serverID: string }) {
 function RoomRow({
   room,
   confirmDelete,
+  permissionsOpen,
   onEdit,
   onDeleteRequest,
   onDeleteConfirm,
   onDeleteCancel,
+  onPermissionsToggle,
 }: {
   room: Room;
   confirmDelete: boolean;
+  permissionsOpen: boolean;
   onEdit: () => void;
   onDeleteRequest: () => void;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
+  onPermissionsToggle: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-deepNavy px-4 py-3">
+    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 transition ${permissionsOpen ? "bg-deepNavy ring-1 ring-electricPurple/30" : "bg-deepNavy"}`}>
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surfaceNavy text-electricPurple">
         {room.is_private ? <Lock className="h-4 w-4" /> : <Hash className="h-4 w-4" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-textHigh">{room.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-textHigh">{room.name}</p>
+          {room.is_read_only && (
+            <span className="rounded bg-surfaceNavy px-1.5 py-0.5 text-[10px] font-medium text-textMed">read-only</span>
+          )}
+        </div>
         {room.description && (
           <p className="truncate text-xs text-textMed">{room.description}</p>
         )}
@@ -812,6 +839,14 @@ function RoomRow({
         <>
           <button
             type="button"
+            onClick={onPermissionsToggle}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition ${permissionsOpen ? "bg-electricPurple/20 text-electricPurple" : "text-textMed hover:bg-surfaceNavy hover:text-electricPurple"}`}
+            aria-label={`${permissionsOpen ? "Hide" : "Show"} permissions for ${room.name}`}
+          >
+            <Shield className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
             onClick={onEdit}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-textMed transition hover:bg-surfaceNavy hover:text-electricPurple"
             aria-label={`Edit ${room.name}`}
@@ -832,11 +867,266 @@ function RoomRow({
   );
 }
 
+/* ─── Overrides ─────────────────────────────────────────────────────────── */
+
+function OverridesPanel({ serverID, roomID }: { serverID: string; roomID: string }) {
+  const [overrides, setOverrides] = useState<RoomPermissionOverride[]>([]);
+  const [roles, setRoles] = useState<ServerRole[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/servers/${serverID}/rooms/${roomID}/overrides`).then((r) => r.ok ? r.json() : []),
+      fetch(`/api/servers/${serverID}/roles`).then((r) => r.ok ? r.json() : []),
+    ]).then(([ovs, rls]) => {
+      setOverrides(ovs ?? []);
+      setRoles(rls ?? []);
+      setLoading(false);
+    });
+  }, [serverID, roomID]);
+
+  const handleDelete = async (id: string) => {
+    const res = await fetch(`/api/servers/${serverID}/rooms/${roomID}/overrides/${id}`, { method: "DELETE" });
+    if (res.ok) setOverrides((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const handleUpsert = async (data: {
+    role_id?: string; user_id?: string;
+    can_send_messages: boolean; can_delete_messages: boolean;
+    can_mute_members: boolean; can_manage_members: boolean; can_manage_rooms: boolean;
+  }) => {
+    const res = await fetch(`/api/servers/${serverID}/rooms/${roomID}/overrides`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const updated: RoomPermissionOverride = await res.json();
+      setOverrides((prev) => {
+        const idx = prev.findIndex((o) => o.id === updated.id);
+        return idx >= 0 ? prev.map((o) => (o.id === updated.id ? updated : o)) : [...prev, updated];
+      });
+      setShowForm(false);
+    }
+  };
+
+  return (
+    <div className="ml-12 flex flex-col gap-2 rounded-xl border border-electricPurple/20 bg-surfaceNavy p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-wider text-textMed">Permission Overrides</p>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-softBorder px-2.5 py-1 text-xs font-semibold text-textMed transition hover:border-electricPurple/50 hover:text-electricPurple"
+        >
+          <Plus className="h-3 w-3" />
+          Add Override
+        </button>
+      </div>
+
+      {showForm && (
+        <OverrideForm
+          roles={roles}
+          onCancel={() => setShowForm(false)}
+          onSubmit={handleUpsert}
+        />
+      )}
+
+      {loading && <p className="text-xs text-textMed">Loading...</p>}
+
+      {overrides.map((override) => (
+        <OverrideRow
+          key={override.id}
+          override={override}
+          roles={roles}
+          onDelete={() => handleDelete(override.id)}
+        />
+      ))}
+
+      {!loading && overrides.length === 0 && !showForm && (
+        <p className="text-xs text-textMed">No overrides configured.</p>
+      )}
+    </div>
+  );
+}
+
+const PERM_LABELS: { key: keyof Pick<RoomPermissionOverride, "can_delete_messages" | "can_mute_members" | "can_manage_members" | "can_manage_rooms" | "can_send_messages">; label: string }[] = [
+  { key: "can_send_messages",   label: "Send Messages" },
+  { key: "can_delete_messages", label: "Delete Msgs" },
+  { key: "can_mute_members",    label: "Mute" },
+  { key: "can_manage_members",  label: "Manage Members" },
+  { key: "can_manage_rooms",    label: "Manage Rooms" },
+];
+
+function OverrideRow({
+  override,
+  roles,
+  onDelete,
+}: {
+  override: RoomPermissionOverride;
+  roles: ServerRole[];
+  onDelete: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const roleName = override.role_id ? (roles.find((r) => r.id === override.role_id)?.name ?? override.role_id) : null;
+  const enabledPerms = PERM_LABELS.filter((p) => override[p.key] === true);
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg bg-deepNavy px-3 py-2.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-electricPurple/10 text-electricPurple">
+        {override.role_id ? <Shield className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-textHigh">
+          {override.role_id ? (
+            <><span className="text-textMed">Role: </span>{roleName}</>
+          ) : (
+            <><span className="text-textMed">User: </span><span className="font-mono">{override.user_id}</span></>
+          )}
+        </p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {enabledPerms.length > 0 ? enabledPerms.map((p) => (
+            <span key={p.key} className="rounded-full bg-electricPurple/15 px-2 py-0.5 text-[10px] font-semibold text-electricPurple">
+              {p.label}
+            </span>
+          )) : (
+            <span className="text-[10px] text-textMed italic">no permissions granted</span>
+          )}
+        </div>
+      </div>
+      {confirmDelete ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-red-400">Delete?</span>
+          <button type="button" onClick={onDelete} className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-red-600">Yes</button>
+          <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full border border-softBorder px-2 py-0.5 text-[10px] font-semibold text-textMed hover:text-textHigh">No</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-textMed transition hover:bg-red-500/10 hover:text-red-400"
+          aria-label="Delete override"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function OverrideForm({
+  roles,
+  onCancel,
+  onSubmit,
+}: {
+  roles: ServerRole[];
+  onCancel: () => void;
+  onSubmit: (data: {
+    role_id?: string; user_id?: string;
+    can_send_messages: boolean; can_delete_messages: boolean;
+    can_mute_members: boolean; can_manage_members: boolean; can_manage_rooms: boolean;
+  }) => void;
+}) {
+  const [targetType, setTargetType] = useState<"role" | "user">("role");
+  const [roleID, setRoleID] = useState(roles[0]?.id ?? "");
+  const [userID, setUserID] = useState("");
+  const [perms, setPerms] = useState({
+    can_send_messages: false,
+    can_delete_messages: false,
+    can_mute_members: false,
+    can_manage_members: false,
+    can_manage_rooms: false,
+  });
+
+  const togglePerm = (key: keyof typeof perms) => setPerms((p) => ({ ...p, [key]: !p[key] }));
+
+  const canSubmit = targetType === "role" ? !!roleID : !!userID.trim();
+
+  const handleSubmit = () => {
+    onSubmit({
+      ...(targetType === "role" ? { role_id: roleID } : { user_id: userID.trim() }),
+      ...perms,
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-electricPurple/30 bg-deepNavy p-3">
+      <div className="flex gap-2">
+        {(["role", "user"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTargetType(t)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${targetType === t ? "bg-electricPurple text-white" : "border border-softBorder text-textMed hover:text-textHigh"}`}
+          >
+            {t === "role" ? "Role" : "User"}
+          </button>
+        ))}
+      </div>
+
+      {targetType === "role" ? (
+        <select
+          value={roleID}
+          onChange={(e) => setRoleID(e.target.value)}
+          className="w-full rounded-lg border border-softBorder bg-surfaceNavy px-3 py-2 text-sm text-textHigh outline-none transition focus:border-electricPurple"
+        >
+          {roles.length === 0 && <option value="">No roles available</option>}
+          {roles.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="text"
+          value={userID}
+          onChange={(e) => setUserID(e.target.value)}
+          placeholder="User ID"
+          className="w-full rounded-lg border border-softBorder bg-surfaceNavy px-3 py-2 text-sm text-textHigh placeholder:text-textMed/50 outline-none transition focus:border-electricPurple"
+        />
+      )}
+
+      <div className="grid grid-cols-2 gap-1.5">
+        {PERM_LABELS.map((p) => (
+          <label key={p.key} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-surfaceNavy">
+            <input
+              type="checkbox"
+              checked={perms[p.key]}
+              onChange={() => togglePerm(p.key)}
+              className="h-3.5 w-3.5 accent-electricPurple"
+            />
+            <span className="text-xs text-textHigh">{p.label}</span>
+          </label>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={handleSubmit}
+          className="rounded-full bg-electricPurple px-4 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full border border-softBorder px-4 py-1.5 text-xs font-semibold text-textMed transition hover:text-textHigh"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RoomForm({
   title,
   initialName = "",
   initialDescription = "",
   initialPrivate = false,
+  initialReadOnly = false,
   onCancel,
   onSubmit,
 }: {
@@ -844,12 +1134,14 @@ function RoomForm({
   initialName?: string;
   initialDescription?: string;
   initialPrivate?: boolean;
+  initialReadOnly?: boolean;
   onCancel: () => void;
-  onSubmit: (data: { name: string; description: string; is_private: boolean }) => void;
+  onSubmit: (data: { name: string; description: string; is_private: boolean; is_read_only: boolean }) => void;
 }) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [isPrivate, setIsPrivate] = useState(initialPrivate);
+  const [isReadOnly, setIsReadOnly] = useState(initialReadOnly);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-electricPurple/30 bg-deepNavy p-4">
@@ -884,11 +1176,23 @@ function RoomForm({
           <p className="text-xs text-textMed">Only members with explicit access can see this room.</p>
         </div>
       </label>
+      <label className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5">
+        <input
+          type="checkbox"
+          checked={isReadOnly}
+          onChange={(e) => setIsReadOnly(e.target.checked)}
+          className="h-4 w-4 accent-electricPurple"
+        />
+        <div>
+          <p className="text-sm font-medium text-textHigh">Read-only room</p>
+          <p className="text-xs text-textMed">Only roles with &quot;Send Messages&quot; permission can post.</p>
+        </div>
+      </label>
       <div className="flex gap-2">
         <button
           type="button"
           disabled={!name.trim()}
-          onClick={() => onSubmit({ name, description, is_private: isPrivate })}
+          onClick={() => onSubmit({ name, description, is_private: isPrivate, is_read_only: isReadOnly })}
           className="rounded-full bg-electricPurple px-4 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Save
