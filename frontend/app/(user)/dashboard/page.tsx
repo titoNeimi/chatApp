@@ -14,42 +14,9 @@ import {
 import { useUserServers } from '@/context/userServersContext'
 import { Plus, Shield, Sparkles, UserPlus } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUser } from '@/context/userContext'
-
-// ---------------------------------------------------------------------------
-// Mock data — remove once backend is connected
-// ---------------------------------------------------------------------------
-
-// TODO: Replace with real DMs fetched from a future /api/users/me/dms endpoint
-const MOCK_DMS: DMItem[] = [
-  {
-    id: '1',
-    name: 'Nova_Core',
-    initials: 'NC',
-    timestamp: '2m',
-    preview: 'The logic gates are synchronize...',
-    online: false,
-  },
-  {
-    id: '2',
-    name: 'Echo_Alpha',
-    initials: 'EA',
-    timestamp: 'Just now',
-    preview: 'New data stream available!',
-    active: true,
-    online: true,
-  },
-  {
-    id: '3',
-    name: 'Bit_Runner',
-    initials: 'BR',
-    timestamp: '1h',
-    preview: "Ping me when you're online.",
-    online: false,
-  },
-]
-
+import { DMChannel } from '@/types/dm'
 
 // TODO: Replace with real trending servers fetched from /api/servers/discover
 const MOCK_TRENDING: TrendingCardData[] = [
@@ -64,6 +31,41 @@ export default function Dashboard() {
   const { servers, refresh: handleServerCreated } = useUserServers()
 
   const [createServerOpen, setCreateServerOpen] = useState(false)
+  const [dmItems, setDmItems] = useState<DMItem[]>([])
+
+  useEffect(() => {
+    if (!user?.id) return
+    const fetchDMs = async () => {
+      const res = await fetch('/api/dm', { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
+      const channels: DMChannel[] = (data.channels ?? []).slice(0, 5)
+
+      const items = await Promise.all(
+        channels.map(async (ch): Promise<DMItem> => {
+          const otherID = ch.user1_id === user.id ? ch.user2_id : ch.user1_id
+          let name = `${otherID.slice(0, 8)}...`
+          try {
+            const usersRes = await fetch(`/api/rooms/${ch.room_id}/users`)
+            if (usersRes.ok) {
+              const members: { UserID: string; Username: string }[] = await usersRes.json()
+              const other = members.find(m => m.UserID !== user.id)
+              if (other) name = other.Username
+            }
+          } catch { /* use fallback name */ }
+          return {
+            id: ch.room_id,
+            name,
+            initials: name.slice(0, 2).toUpperCase(),
+            timestamp: new Date(ch.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+            preview: 'Direct message',
+          }
+        })
+      )
+      setDmItems(items)
+    }
+    fetchDMs()
+  }, [user?.id])
 
   if (isLoading) {
     return (
@@ -110,21 +112,23 @@ export default function Dashboard() {
             <p className="text-xs font-bold uppercase tracking-widest text-textMed">
               Direct Messages
             </p>
-            {/* TODO: Implement new DM flow — open a modal or route to /messages/new */}
-            <button
-              type="button"
+            <Link
+              href="/messages"
               className="flex h-6 w-6 items-center justify-center rounded-full bg-electricPurple/20 text-electricPurple transition hover:bg-electricPurple hover:text-white"
               aria-label="New direct message"
             >
               <Plus className="h-3.5 w-3.5" />
-            </button>
+            </Link>
           </div>
 
           <div className="flex flex-col gap-1">
-            {/* TODO: Replace MOCK_DMS with real data once DM feature is implemented */}
-            {MOCK_DMS.map((dm) => (
-              <DirectMessageItem key={dm.id} dm={dm} />
-            ))}
+            {dmItems.length === 0 ? (
+              <p className="px-1 text-xs text-textMed">No conversations yet.</p>
+            ) : (
+              dmItems.map((dm) => (
+                <DirectMessageItem key={dm.id} dm={dm} />
+              ))
+            )}
           </div>
         </div>
       </aside>

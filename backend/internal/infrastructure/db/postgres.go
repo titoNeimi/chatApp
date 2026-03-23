@@ -42,6 +42,7 @@ func ConnectDB() *gorm.DB {
 		{"ServerUserRoles", &models.ServerUserRoles{}},
 		{"RoomPermissionOverrides", &models.RoomPermissionOverrides{}},
 		{"Invitation", &models.Invitation{}},
+		{"DirectMessages", &models.DirectMessageChannel{}},
 	}
 
 	for _, m := range migrations {

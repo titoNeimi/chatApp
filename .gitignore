@@ -3,3 +3,5 @@ go.work
 
 *.env
 .env.local
+
+docs/

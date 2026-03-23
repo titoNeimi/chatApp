@@ -49,6 +49,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	permissionRepo := postgres.NewPermissionRepo(db)
 	banRepo := postgres.NewServerBanRepo(db)
 	invitationRepo := postgres.NewInvitationRepo(db)
+	dmRepo := postgres.NewDMRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -66,6 +67,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	roleService := application.NewServerRoleService(roleRepo, banRepo, serverRepo)
 	permissionService := application.NewPermissionService(permissionRepo, roleRepo, banRepo)
 	invitationService := application.NewInvitationService(invitationRepo, serverRepo)
+	dmService := application.NewDmService(dmRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -80,6 +82,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	permHandler := NewPermissionHandler(permissionService)
 	invitationHandler := NewInvitationHandler(invitationService, serverService)
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
+	dmHandler := NewDmHandler(dmService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
@@ -167,6 +170,13 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		room.GET("/:roomID/users", roomHandler.ListMembersByRoom, userOrAdmin)
 		room.GET("/:roomID/me", roomHandler.GetMyMembership)
 		room.PUT("/:roomID/read", roomHandler.UpdateLastRead)
+	}
+
+	dm := e.Group("/dm", authMiddleware)
+	{
+		dm.POST("", dmHandler.FindOrCreateDMChannel)
+		dm.GET("", dmHandler.ListDMChannelsForUser)
+		//TODO: dm.DELETE("/:roomID", dmHandler.Archive)
 	}
 
 	message := e.Group("/message", authMiddleware)
