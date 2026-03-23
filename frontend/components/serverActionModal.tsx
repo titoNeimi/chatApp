@@ -92,6 +92,7 @@ function OptionCard({
 function CreateView({ onBack, onClose, onServerCreated }: { onBack: () => void; onClose: () => void; onServerCreated: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,7 +105,7 @@ function CreateView({ onBack, onClose, onServerCreated }: { onBack: () => void; 
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, is_private: isPrivate }),
       });
       if (!response.ok) {
         throw new Error(`Failed to create server: ${response.statusText}`);
@@ -156,7 +157,20 @@ function CreateView({ onBack, onClose, onServerCreated }: { onBack: () => void; 
             className="w-full resize-none rounded-lg border border-softBorder bg-deepNavy px-3 py-2.5 text-sm text-textHigh placeholder:text-textMed/50 outline-none transition focus:border-electricPurple focus:shadow-[0_0_0_2px_var(--color-purpleGlow)]"
           />
         </Field>
-        
+
+        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-softBorder bg-deepNavy px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-textHigh">Private server</p>
+            <p className="text-xs text-textMed">Only members with an invite can join.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={isPrivate}
+            onChange={(e) => setIsPrivate(e.target.checked)}
+            className="h-4 w-4 accent-electricPurple"
+          />
+        </label>
+
         <button
           type="submit"
           disabled={!name.trim() || loading}

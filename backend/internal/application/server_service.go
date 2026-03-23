@@ -61,3 +61,7 @@ func (s *serverService) JoinServer(serverID, userID string) error {
 	}
 	return nil
 }
+
+func (s *serverService) GetAllForAdmin() ([]domain.Server, error) {
+	return s.serverRepo.GetAllForAdmin()
+}

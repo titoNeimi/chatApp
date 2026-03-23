@@ -11,6 +11,7 @@ type Server struct {
 	Name        string
 	Description *string
 	RoomIDs     []string
+	IsPrivate   bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt

@@ -6,4 +6,5 @@ export type Server = {
   created_at: Date
   updated_at: Date
   deleted_at?: Date
+  is_private?: boolean
 }

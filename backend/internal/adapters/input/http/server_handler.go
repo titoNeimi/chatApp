@@ -67,6 +67,7 @@ func (h *serverHandler) Create(c *echo.Context) error {
 	server := domain.Server{
 		Name:        serverData.Name,
 		Description: serverData.Description,
+		IsPrivate:  serverData.IsPrivate,
 	}
 
 	server, err = h.serverService.Create(server, userID)
@@ -164,6 +165,18 @@ func (h *serverHandler) JoinServer(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
+	server, err := h.serverService.GetServerByID(serverID)
+	if err != nil {
+		if errors.Is(domain.ErrServerNotFound, err) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if server.IsPrivate {
+		return echo.NewHTTPError(http.StatusForbidden, "You cant enter in this server")
+	}
+
 	if err := h.serverService.JoinServer(serverID, userID); err != nil {
 		switch err {
 		case domain.ErrServerNotFound:
@@ -197,6 +210,15 @@ func (h *serverHandler) GetStats(c *echo.Context) error {
 	})
 }
 
+func (h *serverHandler) GetAllForAdmin(c *echo.Context) error {
+	servers, err := h.serverService.GetAllForAdmin()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, buildServerResponseList(servers))
+}
+
 func buildServerResponse(s domain.Server) dto.ServerResponse {
 	var deletedAt *time.Time
 	if s.DeletedAt.Valid {
@@ -207,6 +229,7 @@ func buildServerResponse(s domain.Server) dto.ServerResponse {
 		Name:        s.Name,
 		Description: s.Description,
 		RoomIDs:     s.RoomIDs,
+		IsPrivate:   s.IsPrivate,
 		CreatedAt:   s.CreatedAt,
 		UpdatedAt:   s.UpdatedAt,
 		DeletedAt:   deletedAt,
@@ -226,6 +249,7 @@ func buildServerResponseList(servers []domain.Server) []dto.ServerResponse {
 			Name:        serverData.Name,
 			Description: serverData.Description,
 			RoomIDs:     serverData.RoomIDs,
+			IsPrivate:   serverData.IsPrivate,
 			CreatedAt:   serverData.CreatedAt,
 			UpdatedAt:   serverData.UpdatedAt,
 			DeletedAt:   deletedAt,

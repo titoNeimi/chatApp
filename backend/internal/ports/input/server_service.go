@@ -11,4 +11,5 @@ type ServerService interface {
 	GetServerByID(serverId string) (domain.Server, error)
 	JoinServer(serverID, userID string) error
 	GetServerStats(serverID string) (domain.ServerStats, error)
+	GetAllForAdmin() ([]domain.Server, error)
 }

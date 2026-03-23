@@ -99,6 +99,7 @@ function OverviewTab({ serverID }: { serverID: string }) {
   const router = useRouter();
   const [name, setName] = useState(server?.name ?? "");
   const [description, setDescription] = useState(server?.description ?? "");
+  const [isPrivate, setIsPrivate] = useState(server?.is_private ?? false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -107,6 +108,7 @@ function OverviewTab({ serverID }: { serverID: string }) {
     if (server) {
       setName(server.name);
       setDescription(server.description ?? "");
+      setIsPrivate(server.is_private ?? false);
     }
   }, [server]);
 
@@ -116,7 +118,7 @@ function OverviewTab({ serverID }: { serverID: string }) {
       const res = await fetch(`/api/servers/${serverID}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, is_private: isPrivate }),
       });
       if (res.ok) await refreshServer();
     } finally {
@@ -155,6 +157,18 @@ function OverviewTab({ serverID }: { serverID: string }) {
             className={`${inputCls} resize-none`}
           />
         </Field>
+        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-softBorder bg-deepNavy px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-textHigh">Private server</p>
+            <p className="text-xs text-textMed">Only members with an invite can join.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={isPrivate}
+            onChange={(e) => setIsPrivate(e.target.checked)}
+            className="h-4 w-4 accent-electricPurple"
+          />
+        </label>
         <button
           type="button"
           disabled={!name.trim() || saving}

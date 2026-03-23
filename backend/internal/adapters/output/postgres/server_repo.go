@@ -21,7 +21,7 @@ func (r *serverRepo) GetAll() ([]domain.Server, error) {
 
 	var model []models.Server
 
-	if err := r.db.Preload("Rooms").Find(&model).Error; err != nil {
+	if err := r.db.Preload("Rooms").Find(&model, "is_private = false").Error; err != nil {
 		return nil, err
 	}
 
@@ -167,7 +167,6 @@ func (r *serverRepo) RemoveUserFromServer(serverID, userID string) error {
 		Delete(&models.ServerUsers{}).Error
 }
 
-
 func (r *serverRepo) GetServerStats(serverID string) (domain.ServerStats, error) {
 	var memberCount, roomCount, roleCount int64
 
@@ -194,4 +193,22 @@ func (r *serverRepo) GetServerStats(serverID string) (domain.ServerStats, error)
 		RoomCount:   int(roomCount),
 		RoleCount:   int(roleCount),
 	}, nil
+}
+
+func (r *serverRepo) GetAllForAdmin() ([]domain.Server, error) {
+	var model []models.Server
+
+	if err := r.db.Preload("Rooms").Find(&model).Error; err != nil {
+		return nil, err
+	}
+
+	servers := make([]domain.Server, 0, len(model))
+	for i := range model {
+		server := model[i].ToDomain()
+		if server != nil {
+			servers = append(servers, *server)
+		}
+	}
+
+	return servers, nil
 }

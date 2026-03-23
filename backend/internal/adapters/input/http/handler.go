@@ -149,6 +149,8 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 			invitations.POST("", invitationHandler.Create, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
 			invitations.DELETE("/:invitationID", invitationHandler.Delete, middleware.RequireServerPermission(permissionService, domain.PermManageMembers))
 		}
+
+		server.GET("/admin", serverHandler.GetAllForAdmin, adminOnly)
 	}
 
 	e.GET("/invitations/:code", invitationHandler.Preview, authMiddleware)
