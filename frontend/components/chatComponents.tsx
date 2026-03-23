@@ -215,17 +215,22 @@ export function ChatInput({
   onChange,
   onSubmit,
   placeholder = 'Send a message...',
+  disabled = false,
+  disabledMessage = 'You do not have permission to send messages here.',
 }: {
   value: string
   onChange: (val: string) => void
   onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void
   placeholder?: string
+  disabled?: boolean
+  disabledMessage?: string
 }) {
   return (
-    <form onSubmit={onSubmit} className="flex items-center gap-2 rounded-2xl bg-deepNavy p-2 sm:p-3">
+    <form onSubmit={onSubmit} className={`flex items-center gap-2 rounded-2xl bg-deepNavy p-2 sm:p-3 ${disabled ? 'opacity-60' : ''}`}>
       <button
         type="button"
-        className="rounded-lg p-2 text-textMed transition hover:bg-surfaceNavy hover:text-textHigh"
+        disabled={disabled}
+        className="rounded-lg p-2 text-textMed transition hover:bg-surfaceNavy hover:text-textHigh disabled:cursor-not-allowed disabled:pointer-events-none"
         aria-label="Attach file"
       >
         <Paperclip className="h-4 w-4" />
@@ -233,15 +238,17 @@ export function ChatInput({
 
       <input
         type="text"
-        value={value}
+        value={disabled ? '' : value}
         onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="min-w-0 flex-1 bg-transparent text-sm text-textHigh outline-none placeholder:text-textMed sm:text-base"
+        placeholder={disabled ? disabledMessage : placeholder}
+        disabled={disabled}
+        className="min-w-0 flex-1 bg-transparent text-sm text-textHigh outline-none placeholder:text-textMed disabled:cursor-not-allowed sm:text-base"
       />
 
       <button
         type="button"
-        className="rounded-lg p-2 text-textMed transition hover:text-textHigh"
+        disabled={disabled}
+        className="rounded-lg p-2 text-textMed transition hover:text-textHigh disabled:cursor-not-allowed disabled:pointer-events-none"
         aria-label="Emoji"
       >
         <Smile className="h-4 w-4" />
@@ -249,7 +256,8 @@ export function ChatInput({
 
       <button
         type="submit"
-        className="inline-flex items-center gap-2 rounded-xl bg-electricPurple px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 sm:px-5"
+        disabled={disabled}
+        className="inline-flex items-center gap-2 rounded-xl bg-electricPurple px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:pointer-events-none sm:px-5"
       >
         SEND
         <SendHorizontal className="h-4 w-4" />

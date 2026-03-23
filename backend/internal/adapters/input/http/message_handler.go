@@ -18,16 +18,18 @@ import (
 )
 
 type MessageHandler struct {
-	messageService input.MessageService
-	roomService    input.RoomService
-	wsRegistry     *websockets.HubRegistry
+	messageService    input.MessageService
+	roomService       input.RoomService
+	permissionService input.PermissionService
+	wsRegistry        *websockets.HubRegistry
 }
 
-func newMessageHandler(messageService input.MessageService, roomService input.RoomService, wsRegistry *websockets.HubRegistry) *MessageHandler {
+func newMessageHandler(messageService input.MessageService, roomService input.RoomService, permissionService input.PermissionService, wsRegistry *websockets.HubRegistry) *MessageHandler {
 	return &MessageHandler{
-		messageService: messageService,
-		roomService:    roomService,
-		wsRegistry:     wsRegistry,
+		messageService:    messageService,
+		roomService:       roomService,
+		permissionService: permissionService,
+		wsRegistry:        wsRegistry,
 	}
 }
 
@@ -44,7 +46,8 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 	if err := validation.IsValidID(data.RoomID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	if _, err := h.roomService.GetByID(data.RoomID); err != nil {
+	room, err := h.roomService.GetByID(data.RoomID)
+	if err != nil {
 		switch err {
 		case domain.ErrRoomNotFound:
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
@@ -56,6 +59,21 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 	userID, err := middleware.GetAuthenticatedUserID(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
+	userRole, err := middleware.GetAuthenticatedUserRole(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired token")
+	}
+
+	if room.IsReadOnly && userRole != domain.RoleAdmin && room.ServerID != nil {
+		perms, err := h.permissionService.ResolvePermissions(*room.ServerID, room.ID, userID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+		}
+		if !perms.CanSendMessages {
+			return echo.NewHTTPError(http.StatusForbidden, "this room is read-only")
+		}
 	}
 
 	message, err := h.messageService.Create(input.CreateMessageInput{

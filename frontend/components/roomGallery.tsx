@@ -2,7 +2,7 @@
 
 import { useServer } from "@/context/serverContext";
 import { Room } from "@/types/room";
-import { Calendar, ChevronLeft, ChevronRight, Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { Bell, Calendar, ChevronLeft, ChevronRight, Pencil, Plus, Settings, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useUser } from "@/context/userContext";
@@ -78,7 +78,7 @@ function RoomButton(params: { selected: boolean; room: Room; serverID: string; c
   return (
     <div
       title={room.name}
-      className={`relative group/room flex h-32 w-full flex-col gap-2 rounded-2xl p-4 transition duration-200 ${
+      className={`relative group/room flex h-32 w-full flex-col gap-2 overflow-hidden rounded-2xl p-4 transition duration-200 ${
         selected
           ? "bg-deepNavy shadow-[0_12px_24px_var(--color-purpleGlow)]"
           : "bg-deepNavy hover:-translate-y-0.5 hover:shadow-[0_12px_24px_var(--color-panelShadow)]"
@@ -87,7 +87,7 @@ function RoomButton(params: { selected: boolean; room: Room; serverID: string; c
       <Link href={`/${serverID}/${room.id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={room.name} />
 
       <div className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surfaceNavy text-electricPurple shadow-sm">
-        <Calendar className="h-5 w-5" />
+        {room.is_read_only ? <Bell className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
       </div>
       <div className="relative z-10 flex flex-col gap-1 min-w-0 transition-opacity duration-300 group-data-[collapsed=true]:w-0 group-data-[collapsed=true]:h-0 group-data-[collapsed=true]:opacity-0">
         <h2 className="line-clamp-1 overflow-hidden text-ellipsis text-base font-semibold text-textHigh">{room.name}</h2>

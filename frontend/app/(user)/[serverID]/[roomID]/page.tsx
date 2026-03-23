@@ -18,7 +18,7 @@ import { useServer } from "@/context/serverContext";
 
 export default function RoomPage() {
   const { user } = useUser();
-  const { rooms } = useServer();
+  const { rooms, permissions: serverPermissions } = useServer();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -38,7 +38,10 @@ export default function RoomPage() {
   const params = useParams<{ serverID: string; roomID: string }>();
   const serverID = params?.serverID || "";
   const roomID = params?.roomID || "";
-  const roomName = rooms.find(r => r.id === roomID)?.name ?? roomID;
+  const currentRoom = rooms.find(r => r.id === roomID);
+  const roomName = currentRoom?.name ?? roomID;
+  const effectivePermissions = myPermissions ?? serverPermissions;
+  const canSend = !currentRoom?.is_read_only || user?.role === 'admin' || effectivePermissions?.can_send_messages === true;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "instant") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -244,6 +247,8 @@ export default function RoomPage() {
             onChange={setMessageInput}
             onSubmit={handleSend}
             placeholder={`Transmit data to #${roomName}...`}
+            disabled={!canSend}
+            disabledMessage="This room is read-only. You don't have permission to send messages."
           />
         </footer>
       </div>

@@ -13,6 +13,7 @@ type Room struct {
 	Type        string
 	ServerID    *string
 	IsPrivate   bool
+	IsReadOnly  bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt

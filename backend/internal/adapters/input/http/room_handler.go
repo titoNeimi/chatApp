@@ -40,7 +40,16 @@ func (h *RoomHandler) Create(c *echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusCreated, newRoom)
+	return c.JSON(http.StatusCreated, dto.RoomCreateResponse{
+		ID:          newRoom.ID,
+		Name:        newRoom.Name,
+		Description: newRoom.Description,
+		Type:        newRoom.Type,
+		IsPrivate:   newRoom.IsPrivate,
+		IsReadOnly:  newRoom.IsReadOnly,
+		CreatedAt:   newRoom.CreatedAt,
+		UpdatedAt:   newRoom.UpdatedAt,
+	})
 }
 func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 
@@ -66,6 +75,7 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 		Name:        roomData.Name,
 		Description: roomData.Description,
 		IsPrivate:   roomData.IsPrivate,
+		IsReadOnly:  roomData.IsReadOnly,
 	}
 
 	newRoom, err := h.RoomService.CreateForServer(room)
@@ -77,7 +87,17 @@ func (h *RoomHandler) CreateForServer(c *echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 	}
-	return c.JSON(http.StatusCreated, newRoom)
+	return c.JSON(http.StatusCreated, dto.RoomCreateResponse{
+		ID:          newRoom.ID,
+		Name:        newRoom.Name,
+		Description: newRoom.Description,
+		Type:        newRoom.Type,
+		ServerID:    newRoom.ServerID,
+		IsPrivate:   newRoom.IsPrivate,
+		IsReadOnly:  newRoom.IsReadOnly,
+		CreatedAt:   newRoom.CreatedAt,
+		UpdatedAt:   newRoom.UpdatedAt,
+	})
 }
 func (h *RoomHandler) Update(c *echo.Context) error {
 	roomID := c.Param("roomID")
@@ -109,7 +129,17 @@ func (h *RoomHandler) Update(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, room)
+	return c.JSON(http.StatusOK, dto.RoomUpdateResponse{
+		ID:          room.ID,
+		Name:        room.Name,
+		Description: room.Description,
+		Type:        room.Type,
+		ServerID:    room.ServerID,
+		IsPrivate:   room.IsPrivate,
+		IsReadOnly:  room.IsReadOnly,
+		CreatedAt:   room.CreatedAt,
+		UpdatedAt:   room.UpdatedAt,
+	})
 }
 func (h *RoomHandler) GetByID(c *echo.Context) error {
 
@@ -129,7 +159,17 @@ func (h *RoomHandler) GetByID(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, room)
+	return c.JSON(http.StatusOK, dto.RoomResponse{
+		ID:          room.ID,
+		Name:        room.Name,
+		Description: room.Description,
+		Type:        room.Type,
+		ServerID:    room.ServerID,
+		IsPrivate:   room.IsPrivate,
+		IsReadOnly:  room.IsReadOnly,
+		CreatedAt:   room.CreatedAt,
+		UpdatedAt:   room.UpdatedAt,
+	})
 }
 
 func (h *RoomHandler) SoftDelete(c *echo.Context) error {
@@ -176,6 +216,7 @@ func (h *RoomHandler) ListByServer(c *echo.Context) error {
 			Type:        roomData.Type,
 			ServerID:    roomData.ServerID,
 			IsPrivate:   roomData.IsPrivate,
+			IsReadOnly:  roomData.IsReadOnly,
 			DeletedAt:   &roomData.DeletedAt.Time,
 			Name:        roomData.Name,
 		}
@@ -221,7 +262,17 @@ func (h *RoomHandler) UpdateInServer(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, room)
+	return c.JSON(http.StatusOK, dto.RoomUpdateResponse{
+		ID:          room.ID,
+		Name:        room.Name,
+		Description: room.Description,
+		Type:        room.Type,
+		ServerID:    room.ServerID,
+		IsPrivate:   room.IsPrivate,
+		IsReadOnly:  room.IsReadOnly,
+		CreatedAt:   room.CreatedAt,
+		UpdatedAt:   room.UpdatedAt,
+	})
 }
 func (h *RoomHandler) SoftDeleteInServer(c *echo.Context) error {
 	serverID := c.Param("serverID")
