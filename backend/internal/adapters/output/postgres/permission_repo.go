@@ -23,7 +23,7 @@ func (r *PermissionRepo) UpsertOverride(override domain.RoomPermissionOverride) 
 	if override.ID != "" {
 		result = r.db.Save(model)
 	} else {
-		result = r.db.Create(model)
+		result = r.db.Omit("ID").Create(model)
 	}
 
 	if result.Error != nil {

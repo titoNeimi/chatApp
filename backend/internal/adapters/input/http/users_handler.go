@@ -114,7 +114,18 @@ func (h *UserHandler) GetAll(c *echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, users)
+	response := make([]dto.UserResponse, len(users))
+	for i, u := range users {
+		response[i] = dto.UserResponse{
+			ID:        u.ID,
+			Email:     u.Email,
+			Username:  u.Username,
+			Role:      u.Role,
+			CreatedAt: u.CreatedAt,
+			UpdatedAt: u.UpdatedAt,
+		}
+	}
+	return c.JSON(http.StatusOK, response)
 }
 func (h *UserHandler) GetByID(c *echo.Context) error {
 

@@ -40,6 +40,7 @@ func ConnectDB() *gorm.DB {
 		{"ServerUsers", &models.ServerUsers{}},
 		{"ServerRoles", &models.ServerRoles{}},
 		{"ServerUserRoles", &models.ServerUserRoles{}},
+		{"ServerBan", &models.ServerBan{}},
 		{"RoomPermissionOverrides", &models.RoomPermissionOverrides{}},
 		{"Invitation", &models.Invitation{}},
 		{"DirectMessages", &models.DirectMessageChannel{}},
