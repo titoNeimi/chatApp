@@ -75,7 +75,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	AuthHandler := NewAuthHandler(authService, userService)
 	UserHandler := newUserHandler(userService)
-	messageHandler := newMessageHandler(messageService, roomService, wsRegistry)
+	messageHandler := newMessageHandler(messageService, roomService, permissionService, wsRegistry)
 	serverHandler := NewServerHandler(serverService)
 	roomHandler := NewRoomHandler(roomService)
 	roleHandler := NewServerRoleHandler(roleService)
@@ -108,10 +108,10 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 		room := server.Group("/:serverID/room")
 		{
-			room.POST("", roomHandler.CreateForServer, adminOnly)
+			room.POST("", roomHandler.CreateForServer, middleware.RequireServerPermission(permissionService, domain.PermManageRooms))
 			room.GET("", roomHandler.ListByServer, userOrAdmin)
-			room.PUT("/:roomID", roomHandler.UpdateInServer, adminOnly)
-			room.DELETE("/:roomID", roomHandler.SoftDeleteInServer, adminOnly)
+			room.PUT("/:roomID", roomHandler.UpdateInServer, middleware.RequireServerPermission(permissionService, domain.PermManageRooms))
+			room.DELETE("/:roomID", roomHandler.SoftDeleteInServer, middleware.RequireServerPermission(permissionService, domain.PermManageRooms))
 
 			overrides := room.Group("/:roomID/overrides", middleware.RequireServerMember(serverRepo))
 			{
