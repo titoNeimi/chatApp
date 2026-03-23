@@ -2,12 +2,14 @@
 
 import { Category, CategoryFilter, ServerCard, ServerCardData } from "@/components/serverCards";
 import { ServerActionModal } from "@/components/serverActionModal";
+import { useUserServers } from "@/context/userServersContext";
 import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function DiscoverPage() {
+  const { refresh: refreshServers } = useUserServers();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [servers, setServers] = useState<ServerCardData[]>([]);
@@ -24,6 +26,7 @@ export default function DiscoverPage() {
       if (!response.ok) {
         throw new Error(`Failed to join server: ${response.statusText}`);
       }
+      await refreshServers();
       router.push(`/${serverID}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");

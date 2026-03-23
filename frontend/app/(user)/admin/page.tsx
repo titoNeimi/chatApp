@@ -74,7 +74,7 @@ function OverviewTab() {
   useEffect(() => {
     Promise.all([
       fetch('/api/users', { cache: 'no-store' }),
-      fetch('/api/servers', { cache: 'no-store' }),
+      fetch('/api/servers/admin', { cache: 'no-store' }),
     ]).then(async ([usersRes, serversRes]) => {
       if (usersRes.ok) setTotalUsers((await usersRes.json()).length);
       if (serversRes.ok) setTotalServers((await serversRes.json()).length);
@@ -292,7 +292,7 @@ function ServersTab() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch('/api/servers', { cache: 'no-store' })
+    fetch('/api/servers/admin', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : []))
       .then(setServers);
   }, []);

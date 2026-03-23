@@ -62,7 +62,7 @@ export function Topbar() {
   const isOnServer = servers?.some((s) => s.id === selectedServerID);
 
   return (
-    <header className="relative flex h-16 w-full items-center gap-3 bg-deepNavy px-3 backdrop-blur sm:gap-5 sm:px-6">
+    <header className="relative z-20 flex h-16 w-full items-center gap-3 bg-deepNavy px-3 backdrop-blur sm:gap-5 sm:px-6">
       {/* Logo */}
       <div className="flex shrink-0 items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-electricPurple text-white shadow-[0_0_20px_var(--color-purpleGlow)]">
