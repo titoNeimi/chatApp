@@ -18,6 +18,7 @@ func NewUserService(userRepo output.UserRepository) *UserService {
 func (s *UserService) Delete(ctx context.Context, id string) error {
 	return s.userRepo.Delete(ctx, id)
 }
+
 func (s *UserService) Update(ctx context.Context, id string, updates map[string]interface{}) (*domain.User, error) {
 	if len(updates) == 0 {
 		return nil, domain.ErrNoFieldsToUpdate
@@ -82,12 +83,14 @@ func (s *UserService) Update(ctx context.Context, id string, updates map[string]
 
 	return s.userRepo.Update(ctx, id, processedUpdates)
 }
+
 func (s *UserService) ChangeRole(ctx context.Context, id, newRole string) error {
 	if !domain.IsValidRole(newRole) {
 		return domain.ErrInvalidRole
 	}
 	return s.userRepo.ChangeRole(ctx, id, newRole)
 }
+
 func (s *UserService) GetAll(ctx context.Context) ([]domain.User, error) {
 	users, err := s.userRepo.GetAll(ctx)
 	if err != nil {
@@ -95,6 +98,12 @@ func (s *UserService) GetAll(ctx context.Context) ([]domain.User, error) {
 	}
 	return users, nil
 }
+
 func (s *UserService) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	return s.userRepo.FindByID(ctx, id)
+}
+
+func (s *UserService) SearchByUsername(query string, currentUserID string) ([]domain.User, error) {
+	const LIMIT = 10
+	return s.userRepo.SearchByUsername(query, currentUserID, LIMIT)
 }

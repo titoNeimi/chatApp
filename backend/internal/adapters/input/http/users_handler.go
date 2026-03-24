@@ -2,6 +2,7 @@ package handler
 
 import (
 	"chatApp/internal/adapters/input/http/dto"
+	"chatApp/internal/adapters/input/http/middleware"
 	"chatApp/internal/adapters/input/http/validation"
 	"chatApp/internal/domain"
 	"chatApp/internal/ports/input"
@@ -127,6 +128,37 @@ func (h *UserHandler) GetAll(c *echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, response)
 }
+func (h *UserHandler) SearchByUsername(c *echo.Context) error {
+	q := c.QueryParam("q")
+	if len(q) < 2 {
+		return echo.NewHTTPError(http.StatusBadRequest, "query must be at least 2 characters")
+	}
+
+	userID, err := middleware.GetAuthenticatedUserID(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+	}
+
+	users, err := h.userService.SearchByUsername(q, userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	out := make([]dto.UserResponse, 0, len(users))
+	for _, u := range users {
+		out = append(out, dto.UserResponse{
+			ID:        u.ID,
+			Username:  u.Username,
+			Email:     u.Email,
+			Role:      u.Role,
+			CreatedAt: u.CreatedAt,
+			UpdatedAt: u.UpdatedAt,
+		})
+	}
+
+	return c.JSON(http.StatusOK, out)
+}
+
 func (h *UserHandler) GetByID(c *echo.Context) error {
 
 	userID := c.Param("userID")
