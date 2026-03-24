@@ -2,7 +2,7 @@
 
 import { useUserServers } from "@/context/userServersContext";
 import { useUser } from "@/context/userContext";
-import { Bell, ChevronRight, Compass, Home, LogOut, MessageSquare, Moon, Plus, Search, Settings, Shield, Sparkles, Sun } from "lucide-react";
+import { Bell, ChevronRight, Compass, Home, LogOut, MessageSquare, Moon, Plus, Search, Settings, Shield, Sparkles, Sun, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -49,6 +49,21 @@ export function Topbar() {
   });
   const [serversOpen, setServersOpen] = useState(false);
   const [addServerOpen, setAddServerOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const refreshPendingCount = () => {
+    fetch("/api/friends/pending")
+      .then(res => res.ok ? res.json() : [])
+      .then((data: unknown[]) => setPendingCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshPendingCount();
+    window.addEventListener("friends:pending-changed", refreshPendingCount);
+    return () => window.removeEventListener("friends:pending-changed", refreshPendingCount);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -83,6 +98,9 @@ export function Topbar() {
         </NavLink>
         <NavLink href="/messages" active={pathname === "/messages"} icon={<MessageSquare className="h-4 w-4" />}>
           Messages
+        </NavLink>
+        <NavLink href="/friends" active={pathname === "/friends"} icon={<Users className="h-4 w-4" />} badge={pendingCount}>
+          Friends
         </NavLink>
         {user?.role === "admin" && (
           <NavLink href="/admin" active={pathname === "/admin"} icon={<Shield className="h-4 w-4" />}>
@@ -163,8 +181,8 @@ export function Topbar() {
   );
 }
 
-function NavLink(params: { href: string; active: boolean; icon: ReactNode; children: ReactNode }) {
-  const { href, active, icon, children } = params;
+function NavLink(params: { href: string; active: boolean; icon: ReactNode; children: ReactNode; badge?: number }) {
+  const { href, active, icon, children, badge } = params;
   return (
     <Link
       href={href}
@@ -176,6 +194,11 @@ function NavLink(params: { href: string; active: boolean; icon: ReactNode; child
     >
       {icon}
       {children}
+      {badge !== undefined && badge > 0 && (
+        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
