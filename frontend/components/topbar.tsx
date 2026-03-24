@@ -343,9 +343,9 @@ function HexProfileButton() {
 
           {/* Settings & Logout */}
           <div className="px-2 py-2">
-            {/* TODO: Navigate to /settings once the user settings page is implemented */}
             <button
               type="button"
+              onClick={() => router.push('/settings')}
               className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm text-textMed transition hover:bg-deepNavy hover:text-textHigh"
             >
               <Settings className="h-4 w-4 shrink-0" />

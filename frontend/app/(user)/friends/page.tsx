@@ -36,8 +36,10 @@ export default function FriendsPage() {
   }
 
   useEffect(() => {
-    fetchFriends()
-    fetchPending()
+    (async () => {
+      await fetchFriends()
+      await fetchPending()
+    })()
   }, [])
 
   useEffect(() => {
