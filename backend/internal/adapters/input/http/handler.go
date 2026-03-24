@@ -50,6 +50,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	banRepo := postgres.NewServerBanRepo(db)
 	invitationRepo := postgres.NewInvitationRepo(db)
 	dmRepo := postgres.NewDMRepo(db)
+	friendshipRepo := postgres.NewFriendshipRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -68,6 +69,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	permissionService := application.NewPermissionService(permissionRepo, roleRepo, banRepo)
 	invitationService := application.NewInvitationService(invitationRepo, serverRepo)
 	dmService := application.NewDmService(dmRepo)
+	friendService := application.NewFriendService(friendshipRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -83,17 +85,29 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	invitationHandler := NewInvitationHandler(invitationService, serverService)
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
 	dmHandler := NewDmHandler(dmService)
+	friendHandler := newFriendHandler(friendService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
 	users := e.Group("/users", authMiddleware)
 	{
 		users.GET("", UserHandler.GetAll, adminOnly)
+		users.GET("/search", UserHandler.SearchByUsername)
 		users.GET("/:userID/servers", serverHandler.ListByUserID, middleware.RequireSelfOrAdmin("userID"))
 		users.GET("/:userID", UserHandler.GetByID, middleware.RequireSelfOrAdmin("userID"))
 		users.PUT("/:userID", UserHandler.Update, middleware.RequireSelfOrAdmin("userID"))
 		users.DELETE("/:userID", UserHandler.Delete, middleware.RequireSelfOrAdmin("userID"))
 		users.PATCH("/:userID/role", UserHandler.ChangeRole, adminOnly)
+	}
+
+	friends := e.Group("/friends", authMiddleware)
+	{
+		friends.POST("/request", friendHandler.SendRequest)
+		friends.GET("", friendHandler.ListFriends)
+		friends.GET("/pending", friendHandler.ListPending)
+		friends.POST("/request/:requestID/accept", friendHandler.AcceptRequest)
+		friends.POST("/request/:requestID/decline", friendHandler.DeclineRequest)
+		friends.DELETE("/:friendshipID", friendHandler.RemoveFriend)
 	}
 
 	server := e.Group("/server", authMiddleware)

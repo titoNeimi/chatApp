@@ -3,7 +3,6 @@ package postgres
 import (
 	"chatApp/internal/adapters/output/postgres/models"
 	"chatApp/internal/domain"
-	"chatApp/internal/ports/output"
 	"context"
 	"errors"
 
@@ -14,7 +13,7 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) output.UserRepository {
+func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
@@ -141,4 +140,20 @@ func (r *UserRepository) Update(ctx context.Context, id string, updates map[stri
 	}
 
 	return model.ToDomain(), nil
+}
+
+func (r *UserRepository) SearchByUsername(query string, excludeUserID string, limit int) ([]domain.User, error) {
+	var users []models.User
+	err := r.db.Where("username ILIKE ? AND id != ?", "%"+query+"%", excludeUserID).
+		Order("username").Limit(limit).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]domain.User, 0, len(users))
+	for i := range users {
+		if u := users[i].ToDomain(); u != nil {
+			result = append(result, *u)
+		}
+	}
+	return result, nil
 }

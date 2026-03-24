@@ -15,4 +15,5 @@ type UserRepository interface {
 	ChangeRole(ctx context.Context, id, newRole string) error
 	Delete(ctx context.Context, id string) error
 	Update(ctx context.Context, id string, updates map[string]interface{}) (*domain.User, error)
+	SearchByUsername(query string, excludeUserID string, limit int) ([]domain.User, error)
 }

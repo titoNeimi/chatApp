@@ -11,4 +11,5 @@ type UserService interface {
 	ChangeRole(ctx context.Context, id, newRole string) error
 	GetAll(ctx context.Context) ([]domain.User, error)
 	GetByID(ctx context.Context, id string) (*domain.User, error)
+	SearchByUsername(query string, currentUserID string) ([]domain.User, error)
 }
