@@ -15,6 +15,12 @@ export type RoomEvent =
   | {type:"message.new", payload: Message}
   | {type: "message.update", payload:{ID: string, Content: string}}
   | {type: "message.delete", payload:{ID: string}}
+  | {type: "typing.start", payload:{userID: string}}
+  | {type: "typing.stop", payload:{userID: string}}
+
+type OutgoingEvent =
+  | {type: "typing.start"}
+  | {type: "typing.stop"}
 
 
 
@@ -24,15 +30,21 @@ const MAX_ATTEMPTS = 10
 
 export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => void) => {
   const onEventRef = useRef(onEvent)
+  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
     onEventRef.current = onEvent
   })
 
+  const sendEvent = (event: OutgoingEvent) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(event))
+    }
+  }
+
   useEffect(() => {
     if (!roomID) return
 
-    let ws: WebSocket
     let cancelled = false
     let attempt = 0
     let retryTimeout: ReturnType<typeof setTimeout>
@@ -45,7 +57,8 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
       if (cancelled) return
 
       const host = process.env.NEXT_PUBLIC_WS_HOST ?? "localhost:8080"
-      ws = new WebSocket(`ws://${host}/ws/room/${roomID}?token=${token}`)
+      const ws = new WebSocket(`ws://${host}/ws/room/${roomID}?token=${token}`)
+      wsRef.current = ws
 
       ws.onmessage = (e) => {
         if (cancelled) return
@@ -62,6 +75,7 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
       }
 
       ws.onclose = () => {
+        wsRef.current = null
         if (cancelled || attempt >= MAX_ATTEMPTS) return
         const delay = Math.min(BASE_DELAY * 2 ** attempt, MAX_DELAY)
         attempt++
@@ -74,7 +88,9 @@ export const useRoomSocket = (roomID: string, onEvent: (event: RoomEvent) => voi
     return () => {
       cancelled = true
       clearTimeout(retryTimeout)
-      ws?.close()
+      wsRef.current?.close()
     }
   }, [roomID])
+
+  return { sendEvent }
 }

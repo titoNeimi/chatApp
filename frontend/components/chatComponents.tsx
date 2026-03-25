@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronUp, Paperclip, Pencil, SendHorizontal, Smile, Trash2, X } from 'lucide-react'
+import { Check, ChevronUp, Flag, Paperclip, Pencil, SendHorizontal, Shield, Smile, Trash2, UserPlus, X } from 'lucide-react'
 
 export type RoomMember = {
   UserID: string
@@ -52,6 +52,66 @@ export function ChatAvatar({ initials }: { initials: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// UserContextMenu
+// ---------------------------------------------------------------------------
+export function UserContextMenu({
+  x,
+  y,
+  username,
+  isSelf,
+  onAddFriend,
+  onBlock,
+  onReport,
+  onClose,
+}: {
+  x: number
+  y: number
+  username: string
+  isSelf: boolean
+  onAddFriend: () => void
+  onBlock: () => void
+  onReport: () => void
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="fixed z-50 min-w-44 rounded-xl border border-softBorder bg-deepNavy py-1 shadow-xl"
+        style={{ top: y, left: x }}
+      >
+        <div className="border-b border-softBorder px-3 py-2">
+          <p className="text-xs font-semibold text-textHigh">{username}</p>
+        </div>
+        {!isSelf && (
+          <button
+            onClick={onAddFriend}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-electricPurple"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add Friend
+          </button>
+        )}
+        <button
+          onClick={onBlock}
+          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-yellow-400"
+        >
+          <Shield className="h-4 w-4" />
+          Block
+        </button>
+        <button
+          onClick={onReport}
+          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-red-400"
+        >
+          <Flag className="h-4 w-4" />
+          Report
+        </button>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // LoadMoreButton
 // ---------------------------------------------------------------------------
 export function LoadMoreButton({
@@ -93,6 +153,7 @@ export function ChatMessage({
   onDeleteRequest,
   onDeleteConfirm,
   onDeleteCancel,
+  onUserContextMenu,
 }: {
   message: Message
   canEdit: boolean
@@ -107,14 +168,22 @@ export function ChatMessage({
   onDeleteRequest: () => void
   onDeleteConfirm: () => void
   onDeleteCancel: () => void
+  onUserContextMenu: (userID: string, username: string, x: number, y: number) => void
 }) {
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    onUserContextMenu(message.user_id, message.username, e.clientX, e.clientY)
+  }
+
   return (
     <article className="group flex w-full items-end gap-2 justify-start sm:gap-3">
-      <ChatAvatar initials={message.username.slice(0, 2).toUpperCase()} />
+      <span onContextMenu={handleContextMenu} className="cursor-pointer">
+        <ChatAvatar initials={message.username.slice(0, 2).toUpperCase()} />
+      </span>
 
       <div className="flex max-w-[92%] flex-col gap-2 items-start sm:max-w-[80%]">
         <div className="flex items-center gap-2 text-xs">
-          <span className="font-semibold text-textHigh">{message.username}</span>
+          <span onContextMenu={handleContextMenu} className="cursor-pointer font-semibold text-textHigh">{message.username}</span>
           <span className="text-textMed">
             {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
@@ -204,6 +273,32 @@ export function ChatMessage({
         </div>
       </div>
     </article>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// TypingIndicator
+// ---------------------------------------------------------------------------
+export function TypingIndicator({ typingUsers }: { typingUsers: Record<string, string> }) {
+  const names = Object.values(typingUsers)
+  if (names.length === 0) return null
+
+  const text =
+    names.length === 1
+      ? `${names[0]} is typing...`
+      : names.length === 2
+      ? `${names[0]} and ${names[1]} are typing...`
+      : `${names[0]} and ${names.length - 1} others are typing...`
+
+  return (
+    <div className="flex items-center gap-2 px-1 py-1 text-xs text-textMed">
+      <span className="flex gap-0.5 text-electricPurple">
+        <span className="animate-bounce [animation-delay:0ms]">·</span>
+        <span className="animate-bounce [animation-delay:150ms]">·</span>
+        <span className="animate-bounce [animation-delay:300ms]">·</span>
+      </span>
+      <span>{text}</span>
+    </div>
   )
 }
 

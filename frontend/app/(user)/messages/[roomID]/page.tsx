@@ -4,6 +4,8 @@ import {
   ChatInput,
   ChatMessage,
   LoadMoreButton,
+  TypingIndicator,
+  UserContextMenu,
   Message,
   MessagesPage,
   RoomMember,
@@ -31,10 +33,14 @@ export default function DMChatPage() {
   const [editContent, setEditContent] = useState('')
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null)
   const [otherUsername, setOtherUsername] = useState<string>('Direct Message')
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userID: string; username: string } | null>(null)
 
   const userMapRef = useRef<Record<string, RoomMember>>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typingClearTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'instant') => {
     bottomRef.current?.scrollIntoView({ behavior })
@@ -129,10 +135,43 @@ export default function DMChatPage() {
       )
     } else if (event.type === 'message.delete') {
       setMessages(prev => prev.filter(m => m.id !== event.payload.ID))
+    } else if (event.type === 'typing.start') {
+      const { userID } = event.payload
+      const username = userMapRef.current[userID]?.Username ?? userID.slice(0, 8)
+      setTypingUsers(prev => ({ ...prev, [userID]: username }))
+      if (typingClearTimers.current[userID]) clearTimeout(typingClearTimers.current[userID])
+      typingClearTimers.current[userID] = setTimeout(() => {
+        setTypingUsers(prev => { const next = { ...prev }; delete next[userID]; return next })
+      }, 3000)
+    } else if (event.type === 'typing.stop') {
+      const { userID } = event.payload
+      if (typingClearTimers.current[userID]) clearTimeout(typingClearTimers.current[userID])
+      setTypingUsers(prev => { const next = { ...prev }; delete next[userID]; return next })
     }
   }, [scrollToBottom])
 
-  useRoomSocket(roomID, handleEvent)
+  const { sendEvent } = useRoomSocket(roomID, handleEvent)
+
+  const handleInputChange = (val: string) => {
+    setMessageInput(val)
+    if (val.trim()) {
+      sendEvent({ type: 'typing.start' })
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current)
+      typingStopTimer.current = setTimeout(() => sendEvent({ type: 'typing.stop' }), 2000)
+    } else {
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current)
+      sendEvent({ type: 'typing.stop' })
+    }
+  }
+
+  const handleAddFriend = async (userID: string) => {
+    setContextMenu(null)
+    await fetch('/api/friends/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userID }),
+    })
+  }
 
   const handleSaveEdit = async (messageID: string, content: string) => {
     await fetch(`/api/messages/${messageID}`, {
@@ -156,6 +195,8 @@ export default function DMChatPage() {
   const handleSend = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!messageInput.trim()) return
+    if (typingStopTimer.current) clearTimeout(typingStopTimer.current)
+    sendEvent({ type: 'typing.stop' })
     await fetch(`/api/dm/${roomID}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -206,16 +247,31 @@ export default function DMChatPage() {
               onDeleteRequest={() => setConfirmDeleteID(message.id)}
               onDeleteConfirm={() => handleDelete(message.id)}
               onDeleteCancel={() => setConfirmDeleteID(null)}
+              onUserContextMenu={(userID, username, x, y) => setContextMenu({ userID, username, x, y })}
             />
           ))}
 
           <div ref={bottomRef} />
         </div>
 
+        {contextMenu && (
+          <UserContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            username={contextMenu.username}
+            isSelf={contextMenu.userID === user?.id}
+            onAddFriend={() => handleAddFriend(contextMenu.userID)}
+            onBlock={() => setContextMenu(null)}
+            onReport={() => setContextMenu(null)}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+
         <footer className="mt-4">
+          <TypingIndicator typingUsers={typingUsers} />
           <ChatInput
             value={messageInput}
-            onChange={setMessageInput}
+            onChange={handleInputChange}
             onSubmit={handleSend}
             placeholder={`Message @ ${otherUsername}...`}
           />
