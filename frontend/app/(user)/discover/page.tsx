@@ -3,10 +3,12 @@
 import { Category, CategoryFilter, ServerCard, ServerCardData } from "@/components/serverCards";
 import { ServerActionModal } from "@/components/serverActionModal";
 import { useUserServers } from "@/context/userServersContext";
-import { ArrowRight, Plus } from "lucide-react";
-import Link from "next/link";
+import { Flame, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { TrendingServer } from "@/types/server";
+
+type ViewMode = "all" | "trending";
 
 export default function DiscoverPage() {
   const { refresh: refreshServers } = useUserServers();
@@ -14,6 +16,7 @@ export default function DiscoverPage() {
   const [error, setError] = useState<string | null>(null);
   const [servers, setServers] = useState<ServerCardData[]>([]);
   const [category, setCategory] = useState<Category>("All");
+  const [view, setView] = useState<ViewMode>("all");
   const [addServerOpen, setAddServerOpen] = useState(false);
 
   const router = useRouter()
@@ -35,10 +38,26 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const fetchServers = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const result = await fetch('/api/servers/discover', { cache: 'no-store' })
-        const data: ServerCardData[] = await result.json()
-        setServers(data)
+        if (view === "trending") {
+          const result = await fetch('/api/servers/trending', { cache: 'no-store' })
+          if (!result.ok) throw new Error(result.statusText);
+          const data: TrendingServer[] = await result.json()
+          setServers(data.map((s) => ({
+            ...s,
+            created_at: new Date(s.created_at),
+            updated_at: new Date(s.updated_at),
+            memberCount: `${s.member_count}`,
+            badge: "trending" as const,
+          })))
+        } else {
+          const result = await fetch('/api/servers/discover', { cache: 'no-store' })
+          if (!result.ok) throw new Error(result.statusText);
+          const data: ServerCardData[] = await result.json()
+          setServers(data)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
@@ -46,7 +65,7 @@ export default function DiscoverPage() {
       }
     };
     fetchServers();
-  }, []);
+  }, [view]);
 
   return (
     <section className="flex flex-1 flex-col gap-6 text-textHigh">
@@ -55,12 +74,17 @@ export default function DiscoverPage() {
           <h2 className="text-3xl font-bold">Discover Communities</h2>
           <p className="mt-1 text-textMed">Explore the new digital frontiers</p>
         </div>
-        <Link
-          href="/discover"
-          className="inline-flex items-center gap-2 rounded-full border border-softBorder px-4 py-2 text-sm font-semibold text-textMed transition hover:border-electricPurple/60 hover:text-textHigh"
+        <button
+          type="button"
+          onClick={() => setView(view === "trending" ? "all" : "trending")}
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            view === "trending"
+              ? "bg-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.4)]"
+              : "border border-softBorder text-textMed hover:border-emerald-500/60 hover:text-textHigh"
+          }`}
         >
-          See All <ArrowRight className="h-4 w-4" />
-        </Link>
+          <Flame className="h-4 w-4" /> Trending
+        </button>
       </div>
 
       <ServerActionModal open={addServerOpen} onClose={() => setAddServerOpen(false)} onServerCreated={() => {}} />
@@ -74,7 +98,7 @@ export default function DiscoverPage() {
         <Plus className="h-6 w-6" />
       </button>
 
-      <CategoryFilter selected={category} onChange={setCategory} />
+      {view === "all" && <CategoryFilter selected={category} onChange={setCategory} />}
 
       {loading && (
         <div className="flex flex-1 items-center justify-center">

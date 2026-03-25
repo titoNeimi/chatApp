@@ -219,6 +219,30 @@ func (h *serverHandler) GetAllForAdmin(c *echo.Context) error {
 	return c.JSON(http.StatusOK, buildServerResponseList(servers))
 }
 
+func (h *serverHandler) GetTrending(c *echo.Context) error {
+	servers, err := h.serverService.GetTrending(20)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	result := make([]dto.TrendingServerResponse, 0, len(servers))
+	for _, s := range servers {
+		result = append(result, dto.TrendingServerResponse{
+			ID:             s.ID,
+			Name:           s.Name,
+			Description:    s.Description,
+			IsPrivate:      s.IsPrivate,
+			CreatedAt:      s.CreatedAt,
+			UpdatedAt:      s.UpdatedAt,
+			MemberCount:    s.MemberCount,
+			RecentMessages: s.RecentMessages,
+			ActiveUsers:    s.ActiveUsers,
+			TrendScore:     s.TrendScore,
+		})
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
 func buildServerResponse(s domain.Server) dto.ServerResponse {
 	var deletedAt *time.Time
 	if s.DeletedAt.Valid {

@@ -16,4 +16,5 @@ type ServerRepository interface {
 	RemoveUserFromServer(serverID, userID string) error
 	GetServerStats(serverID string) (domain.ServerStats, error)
 	GetAllForAdmin() ([]domain.Server, error)
+	GetTrending(limit int) ([]domain.TrendingServer, error)
 }

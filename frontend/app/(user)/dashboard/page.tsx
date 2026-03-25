@@ -17,12 +17,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useUser } from '@/context/userContext'
 import { DMChannel } from '@/types/dm'
-
-// TODO: Replace with real trending servers fetched from /api/servers/discover
-const MOCK_TRENDING: TrendingCardData[] = [
-  { id: 'trend1', name: 'Code Architects', category: 'Community' },
-  { id: 'trend2', name: 'Deep Space 9', category: 'Exploration' },
-]
+import { TrendingServer } from '@/types/server'
 
 export default function Dashboard() {
   const {user, isLoading} = useUser()
@@ -32,6 +27,25 @@ export default function Dashboard() {
 
   const [createServerOpen, setCreateServerOpen] = useState(false)
   const [dmItems, setDmItems] = useState<DMItem[]>([])
+  const [trendingServers, setTrendingServers] = useState<TrendingCardData[]>([])
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const res = await fetch('/api/servers/trending', { cache: 'no-store' })
+        if (!res.ok) return
+        const data: TrendingServer[] = await res.json()
+        setTrendingServers(
+          data.slice(0, 3).map((s) => ({
+            id: s.id,
+            name: s.name,
+            memberCount: s.member_count,
+          }))
+        )
+      } catch { /* silently fail — sidebar is non-critical */ }
+    }
+    fetchTrending()
+  }, [])
 
   useEffect(() => {
     if (!user?.id) return
@@ -191,10 +205,13 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 rounded-2xl bg-surfaceNavy p-4 shadow-[0_8px_24px_var(--color-panelShadow)]">
           <p className="text-xs font-bold uppercase tracking-widest text-textMed">Trending</p>
           <div className="flex flex-col gap-2">
-            {/* TODO: Replace MOCK_TRENDING with real data from /api/servers/discover */}
-            {MOCK_TRENDING.map((t) => (
-              <TrendingCard key={t.id} data={t} />
-            ))}
+            {trendingServers.length === 0 ? (
+              <p className="text-xs text-textMed">No trending servers yet.</p>
+            ) : (
+              trendingServers.map((t) => (
+                <TrendingCard key={t.id} data={t} />
+              ))
+            )}
           </div>
           <Link
             href="/discover"

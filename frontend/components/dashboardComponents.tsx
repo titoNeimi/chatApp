@@ -175,14 +175,13 @@ export function QuickActionButton({
 export type TrendingCardData = {
   id: string
   name: string
-  category: string
+  memberCount?: number
   image?: string
 }
 
 export function TrendingCard({ data }: { data: TrendingCardData }) {
   return (
-    // TODO: Update href to link to the actual server once discover/join is wired up
-    <Link href={`/discover`} className="group relative overflow-hidden rounded-xl">
+    <Link href={`/${data.id}`} className="group relative overflow-hidden rounded-xl">
       <div className="relative h-24 w-full">
         <Image
           src={data.image ?? PLACEHOLDER_IMAGE}
@@ -192,9 +191,11 @@ export function TrendingCard({ data }: { data: TrendingCardData }) {
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
         <div className="absolute right-0 bottom-0 left-0 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-            {data.category}
-          </p>
+          {data.memberCount !== undefined && (
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+              {data.memberCount} members
+            </p>
+          )}
           <p className="text-sm font-bold text-white">{data.name}</p>
         </div>
       </div>

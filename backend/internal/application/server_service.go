@@ -65,3 +65,7 @@ func (s *serverService) JoinServer(serverID, userID string) error {
 func (s *serverService) GetAllForAdmin() ([]domain.Server, error) {
 	return s.serverRepo.GetAllForAdmin()
 }
+
+func (s *serverService) GetTrending(limit int) ([]domain.TrendingServer, error) {
+	return s.serverRepo.GetTrending(limit)
+}

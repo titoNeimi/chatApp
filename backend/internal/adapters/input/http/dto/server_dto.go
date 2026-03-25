@@ -52,3 +52,16 @@ type ServerResponse struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 }
+
+type TrendingServerResponse struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Description    *string   `json:"description,omitempty"`
+	IsPrivate      bool      `json:"is_private"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	MemberCount    int       `json:"member_count"`
+	RecentMessages int       `json:"recent_messages"`
+	ActiveUsers    int       `json:"active_users"`
+	TrendScore     int       `json:"trend_score"`
+}

@@ -113,6 +113,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	server := e.Group("/server", authMiddleware)
 	{
 		server.GET("", serverHandler.GetAll)
+		server.GET("/trending", serverHandler.GetTrending)
 		server.POST("", serverHandler.Create, userOrAdmin)
 		server.GET("/:serverID", serverHandler.GetServerByID, userOrAdmin)
 		server.PUT("/:serverID", serverHandler.Update, adminOnly)
