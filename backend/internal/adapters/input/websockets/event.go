@@ -9,4 +9,6 @@ const (
 	EventMessageNew    = "message.new"
 	EventMessageUpdate = "message.update"
 	EventMessageDelete = "message.delete"
+	EventTypingStart   = "typing.start"
+	EventTypingEnd     = "typing.stop"
 )

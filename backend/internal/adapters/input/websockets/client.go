@@ -1,6 +1,10 @@
 package websockets
 
-import "github.com/gorilla/websocket"
+import (
+	"encoding/json"
+
+	"github.com/gorilla/websocket"
+)
 
 type Client struct {
 	hub *Hub
@@ -18,9 +22,26 @@ func (c *Client) readPump() {
 	}()
 
 	for {
-		_, _, err := c.conn.ReadMessage()
+		_, content, err := c.conn.ReadMessage()
 		if err != nil {
 			break
+		}
+
+		var event Event
+		if err := json.Unmarshal(content, &event); err != nil {
+			continue
+		}
+
+		switch event.Type {
+		case EventTypingStart, EventTypingEnd:
+			out, err := json.Marshal(Event{
+				Type:    event.Type,
+				Payload: map[string]string{"userID": c.userID},
+			})
+			if err != nil {
+				continue
+			}
+			c.hub.broadcastExcept <- broadcastMessage{sender: c, data: out}
 		}
 	}
 }
