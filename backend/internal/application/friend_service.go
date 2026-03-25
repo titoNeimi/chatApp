@@ -8,10 +8,11 @@ import (
 
 type friendService struct {
 	friendRepo output.FriendshipRepository
+	blockRepo  output.BlockUserRepository
 }
 
-func NewFriendService(friendRepo output.FriendshipRepository) *friendService {
-	return &friendService{friendRepo: friendRepo}
+func NewFriendService(friendRepo output.FriendshipRepository, blockRepo output.BlockUserRepository) *friendService {
+	return &friendService{friendRepo: friendRepo, blockRepo: blockRepo}
 }
 
 func (s *friendService) SendRequest(requesterID, addresseeID string) (*domain.Friendship, error) {
@@ -25,6 +26,21 @@ func (s *friendService) SendRequest(requesterID, addresseeID string) (*domain.Fr
 	}
 	if !errors.Is(err, domain.ErrFriendshipNotFound) {
 		return nil, err
+	}
+
+	isBlocked, err := s.blockRepo.IsBlocked(requesterID, addresseeID)
+	if err != nil {
+		return nil, err
+	}
+	if isBlocked {
+		return nil, domain.ErrUserIsBlocked
+	}
+	amBlocked, err := s.blockRepo.IsBlocked(addresseeID, requesterID)
+	if err != nil {
+		return nil, err
+	}
+	if amBlocked {
+		return nil, domain.ErrCannotSendFriendRequest
 	}
 
 	return s.friendRepo.Create(requesterID, addresseeID)

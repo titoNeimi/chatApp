@@ -51,6 +51,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	invitationRepo := postgres.NewInvitationRepo(db)
 	dmRepo := postgres.NewDMRepo(db)
 	friendshipRepo := postgres.NewFriendshipRepo(db)
+	blockUserRepo := postgres.NewBlockUserRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -62,7 +63,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 
 	authService := application.NewAuthService(userRepo, refreshTokenRepo, tokenProvider)
 	userService := application.NewUserService(userRepo)
-	messageService := application.NewMessageService(messageRepo, roomRepo)
+	messageService := application.NewMessageService(messageRepo, roomRepo, blockUserRepo)
 	serverService := application.NewServerService(serverRepo, roomRepo)
 	roomService := application.NewRoomService(roomRepo, serverRepo, userRepo)
 	roleService := application.NewServerRoleService(roleRepo, banRepo, serverRepo)
@@ -70,6 +71,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	invitationService := application.NewInvitationService(invitationRepo, serverRepo)
 	dmService := application.NewDmService(dmRepo)
 	friendService := application.NewFriendService(friendshipRepo)
+	blockUserService := application.NewBlockUserService(blockUserRepo, friendshipRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -86,6 +88,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	wsHandler := websockets.NewWSHandler(wsRegistry, authService, roomService)
 	dmHandler := NewDmHandler(dmService)
 	friendHandler := newFriendHandler(friendService)
+	blockUserHandler := newBlockUserHandler(blockUserService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
@@ -98,6 +101,13 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 		users.PUT("/:userID", UserHandler.Update, middleware.RequireSelfOrAdmin("userID"))
 		users.DELETE("/:userID", UserHandler.Delete, middleware.RequireSelfOrAdmin("userID"))
 		users.PATCH("/:userID/role", UserHandler.ChangeRole, adminOnly)
+	}
+
+	block := e.Group("/users/block", authMiddleware)
+	{
+		block.POST("", blockUserHandler.Block)
+		block.DELETE("/:userID", blockUserHandler.Unblock)
+		block.GET("", blockUserHandler.ListBlocked)
 	}
 
 	friends := e.Group("/friends", authMiddleware)

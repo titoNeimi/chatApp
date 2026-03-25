@@ -11,13 +11,50 @@ import (
 type MessageService struct {
 	messageRepo output.MessageRepository
 	roomRepo    output.RoomRepository
+	blockRepo   output.BlockUserRepository
 }
 
-func NewMessageService(messageRepo output.MessageRepository, roomRepo output.RoomRepository) *MessageService {
-	return &MessageService{messageRepo: messageRepo, roomRepo: roomRepo}
+func NewMessageService(messageRepo output.MessageRepository, roomRepo output.RoomRepository, blockRepo output.BlockUserRepository) *MessageService {
+	return &MessageService{messageRepo: messageRepo, roomRepo: roomRepo, blockRepo: blockRepo}
 }
 
 func (s *MessageService) Create(cmd input.CreateMessageInput) (domain.Message, error) {
+
+	room, err := s.roomRepo.GetByID(cmd.RoomID)
+	if err != nil {
+		return domain.Message{}, err
+	}
+
+	if room.Type == domain.DIRECT_MESSAGE {
+		members, err := s.roomRepo.ListMembersByRoom(cmd.RoomID)
+		if err != nil {
+			return domain.Message{}, err
+		}
+
+		var otherMember domain.RoomMember
+		for _, member := range members {
+			if member.UserID == cmd.UserID {
+				continue
+			}
+			otherMember = member
+		}
+
+		isBlocked, err := s.blockRepo.IsBlocked(cmd.UserID, otherMember.UserID)
+		if err != nil {
+			return domain.Message{}, err
+		}
+		if isBlocked {
+			return domain.Message{}, domain.ErrUserIsBlocked
+		}
+		amBlocked, err := s.blockRepo.IsBlocked(otherMember.UserID, cmd.UserID)
+		if err != nil {
+			return domain.Message{}, err
+		}
+		if amBlocked {
+			return domain.Message{}, domain.ErrCannotSendMessage
+		}
+	}
+
 	now := time.Now().UTC()
 
 	message := domain.Message{

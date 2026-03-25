@@ -83,7 +83,14 @@ func (h *MessageHandler) Create(c *echo.Context) error {
 		RoomID:           data.RoomID,
 	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		switch err {
+		case domain.ErrRoomNotFound:
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		case domain.ErrUserIsBlocked, domain.ErrCannotSendMessage:
+			return echo.NewHTTPError(http.StatusForbidden, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
 	}
 
 	payload, err := json.Marshal(websockets.Event{
