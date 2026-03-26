@@ -189,10 +189,11 @@ export default function Dashboard() {
               Create Server
             </QuickActionButton>
 
-            {/* TODO: Implement Find Friends feature (search users, send friend requests) */}
-            <QuickActionButton icon={<UserPlus className="h-4 w-4 shrink-0" />}>
-              Find Friends
-            </QuickActionButton>
+            <Link href="/friends">
+              <QuickActionButton icon={<UserPlus className="h-4 w-4 shrink-0" />}>
+                Find Friends
+              </QuickActionButton>
+            </Link>
 
             {/* TODO: Link to a /settings or /privacy page once user settings are implemented */}
             <QuickActionButton icon={<Shield className="h-4 w-4 shrink-0" />}>
