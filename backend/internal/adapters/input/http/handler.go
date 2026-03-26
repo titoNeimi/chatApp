@@ -70,7 +70,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	permissionService := application.NewPermissionService(permissionRepo, roleRepo, banRepo)
 	invitationService := application.NewInvitationService(invitationRepo, serverRepo)
 	dmService := application.NewDmService(dmRepo)
-	friendService := application.NewFriendService(friendshipRepo)
+	friendService := application.NewFriendService(friendshipRepo, blockUserRepo)
 	blockUserService := application.NewBlockUserService(blockUserRepo, friendshipRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)

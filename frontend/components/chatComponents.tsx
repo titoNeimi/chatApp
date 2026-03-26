@@ -1,6 +1,7 @@
 'use client'
 
-import { Check, ChevronUp, Flag, Paperclip, Pencil, SendHorizontal, Shield, Smile, Trash2, UserPlus, X } from 'lucide-react'
+import { Check, ChevronUp, Eye, Flag, Paperclip, Pencil, SendHorizontal, Shield, Smile, Trash2, UserPlus, X } from 'lucide-react'
+import { useState } from 'react'
 
 export type RoomMember = {
   UserID: string
@@ -59,6 +60,7 @@ export function UserContextMenu({
   y,
   username,
   isSelf,
+  isBlocked,
   onAddFriend,
   onBlock,
   onReport,
@@ -68,6 +70,7 @@ export function UserContextMenu({
   y: number
   username: string
   isSelf: boolean
+  isBlocked: boolean
   onAddFriend: () => void
   onBlock: () => void
   onReport: () => void
@@ -84,28 +87,30 @@ export function UserContextMenu({
           <p className="text-xs font-semibold text-textHigh">{username}</p>
         </div>
         {!isSelf && (
-          <button
-            onClick={onAddFriend}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-electricPurple"
-          >
-            <UserPlus className="h-4 w-4" />
-            Add Friend
-          </button>
+          <>
+            <button
+              onClick={onAddFriend}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-electricPurple"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add Friend
+            </button>
+            <button
+              onClick={onBlock}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-yellow-400"
+            >
+              <Shield className="h-4 w-4" />
+              {isBlocked ? 'Unblock' : 'Block'}
+            </button>
+            <button
+              onClick={onReport}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-red-400"
+            >
+              <Flag className="h-4 w-4" />
+              Report
+            </button>
+          </>
         )}
-        <button
-          onClick={onBlock}
-          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-yellow-400"
-        >
-          <Shield className="h-4 w-4" />
-          Block
-        </button>
-        <button
-          onClick={onReport}
-          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-textMed transition hover:bg-surfaceNavy hover:text-red-400"
-        >
-          <Flag className="h-4 w-4" />
-          Report
-        </button>
       </div>
     </>
   )
@@ -143,6 +148,7 @@ export function ChatMessage({
   message,
   canEdit,
   canDelete,
+  isBlocked = false,
   isEditing,
   isConfirmingDelete,
   editContent,
@@ -158,6 +164,7 @@ export function ChatMessage({
   message: Message
   canEdit: boolean
   canDelete: boolean
+  isBlocked?: boolean
   isEditing: boolean
   isConfirmingDelete: boolean
   editContent: string
@@ -170,9 +177,33 @@ export function ChatMessage({
   onDeleteCancel: () => void
   onUserContextMenu: (userID: string, username: string, x: number, y: number) => void
 }) {
+  const [revealed, setRevealed] = useState(false)
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     onUserContextMenu(message.user_id, message.username, e.clientX, e.clientY)
+  }
+
+  if (isBlocked && !revealed) {
+    return (
+      <article className="flex w-full items-center gap-3">
+        <ChatAvatar initials={message.username.slice(0, 2).toUpperCase()} />
+        <div className="flex flex-1 items-center gap-3 rounded-2xl border border-softBorder bg-deepNavy px-4 py-3">
+          <Shield className="h-4 w-4 shrink-0 text-yellow-400/70" />
+          <p className="flex-1 text-sm text-textMed italic">
+            Message from a blocked user — <span className="font-semibold not-italic text-textHigh">{message.username}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setRevealed(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-softBorder px-3 py-1 text-xs font-semibold text-textMed transition hover:border-electricPurple/50 hover:text-electricPurple"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Show
+          </button>
+        </div>
+      </article>
+    )
   }
 
   return (

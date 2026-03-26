@@ -15,9 +15,11 @@ import { useRoomSocket, RoomEvent } from '@/hooks/useRoomSocket'
 import { useUser } from '@/context/userContext'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useUserBlocks } from '@/context/userBlocksContext'
 
 export default function DMChatPage() {
   const { user } = useUser()
+  const { isBlocked, addUserBlock, removeUserBlock, loading } = useUserBlocks()
   const router = useRouter()
   const params = useParams<{ roomID: string }>()
   const roomID = params?.roomID ?? ''
@@ -33,6 +35,7 @@ export default function DMChatPage() {
   const [editContent, setEditContent] = useState('')
   const [confirmDeleteID, setConfirmDeleteID] = useState<string | null>(null)
   const [otherUsername, setOtherUsername] = useState<string>('Direct Message')
+  const [otherUserID, setOtherUserID] = useState<string>('')
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userID: string; username: string } | null>(null)
 
@@ -65,7 +68,7 @@ export default function DMChatPage() {
         userMapRef.current = userMap
 
         const other = members.find(m => m.UserID !== user?.id)
-        if (other) setOtherUsername(other.Username)
+        if (other) { setOtherUsername(other.Username); setOtherUserID(other.UserID) }
 
         setMessages(enrichMessages(page.messages ?? [], userMap))
         setHasMore(page.has_more ?? false)
@@ -260,8 +263,13 @@ export default function DMChatPage() {
             y={contextMenu.y}
             username={contextMenu.username}
             isSelf={contextMenu.userID === user?.id}
+            isBlocked={isBlocked(contextMenu.userID)}
             onAddFriend={() => handleAddFriend(contextMenu.userID)}
-            onBlock={() => setContextMenu(null)}
+            onBlock={() => {
+              if (isBlocked(contextMenu.userID)) removeUserBlock(contextMenu.userID)
+              else addUserBlock(contextMenu.userID)
+              setContextMenu(null)
+            }}
             onReport={() => setContextMenu(null)}
             onClose={() => setContextMenu(null)}
           />
@@ -274,6 +282,8 @@ export default function DMChatPage() {
             onChange={handleInputChange}
             onSubmit={handleSend}
             placeholder={`Message @ ${otherUsername}...`}
+            disabled={loading || isBlocked(otherUserID)}
+            disabledMessage={`You have blocked ${otherUsername}.`}
           />
         </footer>
       </div>

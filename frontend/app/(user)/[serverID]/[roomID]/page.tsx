@@ -17,10 +17,12 @@ import { useParams } from "next/navigation";
 import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
 import { useUser } from "@/context/userContext";
 import { useServer } from "@/context/serverContext";
+import { useUserBlocks } from "@/context/userBlocksContext";
 
 export default function RoomPage() {
   const { user } = useUser();
   const { rooms, permissions: serverPermissions } = useServer();
+  const { isBlocked, addUserBlock, removeUserBlock } = useUserBlocks();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -266,6 +268,7 @@ export default function RoomPage() {
                 message={message}
                 canEdit={canEdit}
                 canDelete={canDelete}
+                isBlocked={isBlocked(message.user_id)}
                 isEditing={editingMessageID === message.id}
                 isConfirmingDelete={confirmDeleteID === message.id}
                 editContent={editContent}
@@ -290,8 +293,13 @@ export default function RoomPage() {
             y={contextMenu.y}
             username={contextMenu.username}
             isSelf={contextMenu.userID === user?.id}
+            isBlocked={isBlocked(contextMenu.userID)}
             onAddFriend={() => handleAddFriend(contextMenu.userID)}
-            onBlock={() => setContextMenu(null)}
+            onBlock={() => {
+              if (isBlocked(contextMenu.userID)) removeUserBlock(contextMenu.userID)
+              else addUserBlock(contextMenu.userID)
+              setContextMenu(null)
+            }}
             onReport={() => setContextMenu(null)}
             onClose={() => setContextMenu(null)}
           />

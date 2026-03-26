@@ -1,14 +1,16 @@
 'use client'
 
 import { HexAvatar } from '@/components/dashboardComponents'
+import { useUserBlocks } from '@/context/userBlocksContext'
 import { FriendEntry, PendingRequest } from '@/types/friends'
 import { User } from '@/types/user'
-import { Check, MessageSquare, Search, UserMinus, X } from 'lucide-react'
+import { Check, MessageSquare, Search, Shield, UserMinus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 export default function FriendsPage() {
   const router = useRouter()
+  const { addUserBlock } = useUserBlocks()
 
   const [friends, setFriends] = useState<FriendEntry[]>([])
   const [pending, setPending] = useState<PendingRequest[]>([])
@@ -18,8 +20,10 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<User[]>([])
   const [searching, setSearching] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   const fetchFriends = async () => {
     setLoadingFriends(true)
@@ -40,6 +44,16 @@ export default function FriendsPage() {
       await fetchFriends()
       await fetchPending()
     })()
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   useEffect(() => {
@@ -74,6 +88,11 @@ export default function FriendsPage() {
     if (res.ok) setFriends(prev => prev.filter(f => f.friendship_id !== friendshipID))
   }
 
+  const handleBlock = async (userID: string) => {
+    setFriends(prev => prev.filter(f => f.user.id !== userID))
+    await addUserBlock(userID)
+  }
+
   const handleAccept = async (friendshipID: string) => {
     const res = await fetch(`/api/friends/requests/${friendshipID}/accept`, { method: 'POST' })
     if (res.ok) {
@@ -104,16 +123,17 @@ export default function FriendsPage() {
 
   return (
     <div className="flex h-[calc(100dvh-8.5rem)] min-h-120 w-full flex-col gap-6 overflow-hidden">
-      <div className="relative">
+      <div ref={searchRef} className="relative">
         <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-textMed" />
         <input
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
+          onFocus={() => setSearchOpen(true)}
           placeholder="Search for users or node IDs..."
           className="w-full rounded-2xl bg-surfaceNavy py-4 pl-12 pr-6 text-sm text-textHigh shadow-[0_8px_24px_var(--color-panelShadow)] outline-none ring-1 ring-softBorder placeholder:text-textMed focus:ring-electricPurple/50"
         />
-        {(searchResults.length > 0 || searching || searchQuery.length >= 2) && (
+        {searchOpen && (searchResults.length > 0 || searching || searchQuery.length >= 2) && (
           <div className="absolute top-full z-20 mt-2 w-full rounded-2xl border border-softBorder bg-surfaceNavy shadow-[0_8px_32px_var(--color-panelShadow)]">
             {searching && (
               <p className="px-5 py-4 text-sm text-textMed">Searching...</p>
@@ -228,14 +248,24 @@ export default function FriendsPage() {
                       <MessageSquare className="h-4 w-4" />
                       Message
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(f.friendship_id)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-transparent py-1.5 text-xs font-semibold uppercase tracking-widest text-textMed transition hover:text-red-400"
-                    >
-                      <UserMinus className="h-3.5 w-3.5" />
-                      Remove
-                    </button>
+                    <div className="flex w-full gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(f.friendship_id)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-transparent py-1.5 text-xs font-semibold uppercase tracking-widest text-textMed transition hover:text-red-400"
+                      >
+                        <UserMinus className="h-3.5 w-3.5" />
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBlock(f.user.id)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-transparent py-1.5 text-xs font-semibold uppercase tracking-widest text-textMed transition hover:text-yellow-400"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        Block
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
