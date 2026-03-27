@@ -30,6 +30,7 @@ func roleToResponse(r domain.ServerRole) dto.RoleResponse {
 		CanManageMembers:  r.CanManageMembers,
 		CanManageRooms:    r.CanManageRooms,
 		CanSendMessages:   r.CanSendMessages,
+		DisplaySeparately: r.DisplaySeparately,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
 	}
@@ -55,6 +56,7 @@ func (h *serverRoleHandler) CreateRole(c *echo.Context) error {
 		CanManageMembers:  body.CanManageMembers,
 		CanManageRooms:    body.CanManageRooms,
 		CanSendMessages:   body.CanSendMessages,
+		DisplaySeparately: body.DisplaySeparately,
 	}
 
 	role, err := h.roleService.CreateRole(serverID, body.Name, perms)

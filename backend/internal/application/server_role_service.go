@@ -28,6 +28,7 @@ func (s *ServerRoleService) CreateRole(serverID, name string, perms domain.Serve
 		CanMuteMembers:    perms.CanMuteMembers,
 		CanManageMembers:  perms.CanManageMembers,
 		CanManageRooms:    perms.CanManageRooms,
+		DisplaySeparately: perms.DisplaySeparately,
 	}
 	return s.roleRepo.CreateRole(role)
 }

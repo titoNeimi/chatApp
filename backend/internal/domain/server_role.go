@@ -19,6 +19,7 @@ type ServerRole struct {
 	CanManageMembers  bool
 	CanManageRooms    bool
 	CanSendMessages   bool
+	DisplaySeparately bool
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

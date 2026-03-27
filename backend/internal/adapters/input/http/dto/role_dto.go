@@ -11,6 +11,7 @@ type CreateRoleRequest struct {
 	CanManageMembers  bool   `json:"can_manage_members"`
 	CanManageRooms    bool   `json:"can_manage_rooms"`
 	CanSendMessages   bool   `json:"can_send_messages"`
+	DisplaySeparately bool   `json:"display_separately"`
 }
 
 type UpdateRoleRequest struct {
@@ -20,6 +21,7 @@ type UpdateRoleRequest struct {
 	CanManageMembers  *bool   `json:"can_manage_members,omitempty"`
 	CanManageRooms    *bool   `json:"can_manage_rooms,omitempty"`
 	CanSendMessages   *bool   `json:"can_send_messages,omitempty"`
+	DisplaySeparately *bool   `json:"display_separately,omitempty"`
 }
 
 type RoleResponse struct {
@@ -31,6 +33,7 @@ type RoleResponse struct {
 	CanManageMembers  bool      `json:"can_manage_members"`
 	CanManageRooms    bool      `json:"can_manage_rooms"`
 	CanSendMessages   bool      `json:"can_send_messages"`
+	DisplaySeparately bool      `json:"display_separately"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

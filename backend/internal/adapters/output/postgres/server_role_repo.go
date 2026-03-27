@@ -137,6 +137,7 @@ func (r *ServerRoleRepo) ListUsersWithRoles(serverID string) ([]domain.UserWithR
 		CanManageMembers  bool   `gorm:"column:can_manage_members"`
 		CanManageRooms    bool   `gorm:"column:can_manage_rooms"`
 		CanSendMessages   bool   `gorm:"column:can_send_messages"`
+		DisplaySeparately bool   `gorm:"column:display_separately"`
 	}
 
 	var rows []row
@@ -147,7 +148,8 @@ func (r *ServerRoleRepo) ListUsersWithRoles(serverID string) ([]domain.UserWithR
       COALESCE(sr.can_mute_members, false) AS can_mute_members,
 		  COALESCE(sr.can_manage_members, false) AS can_manage_members,
 		  COALESCE(sr.can_manage_rooms, false) AS can_manage_rooms,
-		  COALESCE(sr.can_send_messages, false) AS can_send_messages
+		  COALESCE(sr.can_send_messages, false) AS can_send_messages,
+		  COALESCE(sr.display_separately, false) AS display_separately
 		FROM server_users su
 		JOIN users u ON u.id = su.user_id
 		LEFT JOIN server_user_roles sur ON sur.user_id = su.user_id AND sur.server_id = su.server_id
@@ -179,6 +181,7 @@ func (r *ServerRoleRepo) ListUsersWithRoles(serverID string) ([]domain.UserWithR
 				CanManageMembers:  r.CanManageMembers,
 				CanManageRooms:    r.CanManageRooms,
 				CanSendMessages:   r.CanSendMessages,
+				DisplaySeparately: r.DisplaySeparately,
 			})
 		}
 	}
