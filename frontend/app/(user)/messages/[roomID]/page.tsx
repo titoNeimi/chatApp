@@ -64,11 +64,11 @@ export default function DMChatPage() {
         const members: RoomMember[] = membersRes.ok ? await membersRes.json() : []
         const page: MessagesPage = await messagesRes.json()
 
-        const userMap = Object.fromEntries(members.map(m => [m.UserID, m]))
+        const userMap = Object.fromEntries(members.map(m => [m.user_id, m]))
         userMapRef.current = userMap
 
-        const other = members.find(m => m.UserID !== user?.id)
-        if (other) { setOtherUsername(other.Username); setOtherUserID(other.UserID) }
+        const other = members.find(m => m.user_id !== user?.id)
+        if (other) { setOtherUsername(other.username); setOtherUserID(other.user_id) }
 
         setMessages(enrichMessages(page.messages ?? [], userMap))
         setHasMore(page.has_more ?? false)
@@ -118,7 +118,7 @@ export default function DMChatPage() {
           id: event.payload.ID,
           content: event.payload.Content,
           user_id: event.payload.UserID,
-          username: userMapRef.current[event.payload.UserID]?.Username ?? event.payload.UserID.slice(0, 8),
+          username: userMapRef.current[event.payload.UserID]?.username ?? event.payload.UserID.slice(0, 8),
           reply_to_message_id: event.payload.ReplyToMessageID,
           room_id: event.payload.RoomID,
           created_at: event.payload.CreatedAt,
@@ -140,7 +140,7 @@ export default function DMChatPage() {
       setMessages(prev => prev.filter(m => m.id !== event.payload.ID))
     } else if (event.type === 'typing.start') {
       const { userID } = event.payload
-      const username = userMapRef.current[userID]?.Username ?? userID.slice(0, 8)
+      const username = userMapRef.current[userID]?.username ?? userID.slice(0, 8)
       setTypingUsers(prev => ({ ...prev, [userID]: username }))
       if (typingClearTimers.current[userID]) clearTimeout(typingClearTimers.current[userID])
       typingClearTimers.current[userID] = setTimeout(() => {

@@ -40,8 +40,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           const usersRes = await fetch(`/api/rooms/${ch.room_id}/users`)
           if (usersRes.ok) {
             const members: RoomMember[] = await usersRes.json()
-            const other = members.find(m => m.UserID !== user.id)
-            if (other) return { channel: ch, otherUsername: other.Username }
+            const other = members.find(m => m.user_id !== user.id)
+            if (other) return { channel: ch, otherUsername: other.username }
           }
         } catch { /* fallback below */ }
         const fallbackID = ch.user1_id === user.id ? ch.user2_id : ch.user1_id

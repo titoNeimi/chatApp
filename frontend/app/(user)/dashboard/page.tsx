@@ -62,9 +62,9 @@ export default function Dashboard() {
           try {
             const usersRes = await fetch(`/api/rooms/${ch.room_id}/users`)
             if (usersRes.ok) {
-              const members: { UserID: string; Username: string }[] = await usersRes.json()
-              const other = members.find(m => m.UserID !== user.id)
-              if (other) name = other.Username
+              const members: { user_id: string; username: string }[] = await usersRes.json()
+              const other = members.find(m => m.user_id !== user.id)
+              if (other) name = other.username
             }
           } catch { /* use fallback name */ }
           return {

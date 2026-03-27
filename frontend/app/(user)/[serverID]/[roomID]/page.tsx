@@ -18,6 +18,7 @@ import { useRoomSocket, RoomEvent } from "@/hooks/useRoomSocket";
 import { useUser } from "@/context/userContext";
 import { useServer } from "@/context/serverContext";
 import { useUserBlocks } from "@/context/userBlocksContext";
+import { Users } from "lucide-react";
 
 export default function RoomPage() {
   const { user } = useUser();
@@ -37,6 +38,8 @@ export default function RoomPage() {
 
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; userID: string; username: string } | null>(null);
+  const [members, setMembers] = useState<RoomMember[]>([]);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const userMapRef = useRef<Record<string, RoomMember>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -63,9 +66,8 @@ export default function RoomPage() {
       setIsLoading(true);
       try {
         const base = `/api/servers/${serverID}/rooms/${roomID}`;
-        const [membersRes, , messagesRes, permissionsRes] = await Promise.all([
+        const [membersRes, messagesRes, permissionsRes] = await Promise.all([
           fetch(`${base}/users`),
-          fetch(`${base}/me`),
           fetch(`${base}/messages?limit=50`),
           fetch(`/api/servers/${serverID}/my-permissions?roomID=${roomID}`),
         ]);
@@ -77,13 +79,14 @@ export default function RoomPage() {
         const [members, page, permissions]: [RoomMember[], MessagesPage, EffectivePermissions] = await Promise.all([
           membersRes.json(),
           messagesRes.json(),
-          permissionsRes.json(),
+          permissionsRes.json()
         ]);
 
         setMyPermissions(permissions);
 
-        const userMap = Object.fromEntries(members.map(m => [m.UserID, m]));
+        const userMap = Object.fromEntries(members.map(m => [m.user_id, m]));
         userMapRef.current = userMap;
+        setMembers(members);
 
         setMessages(enrichMessages(page?.messages ?? [], userMap));
         setHasMore(page?.has_more ?? false);
@@ -144,7 +147,7 @@ export default function RoomPage() {
           id: event.payload.ID,
           content: event.payload.Content,
           user_id: event.payload.UserID,
-          username: userMapRef.current[event.payload.UserID]?.Username ?? event.payload.UserID.slice(0, 8),
+          username: userMapRef.current[event.payload.UserID]?.username ?? event.payload.UserID.slice(0, 8),
           reply_to_message_id: event.payload.ReplyToMessageID,
           room_id: event.payload.RoomID,
           created_at: event.payload.CreatedAt,
@@ -162,7 +165,7 @@ export default function RoomPage() {
       setMessages(prev => prev.filter(m => m.id !== event.payload.ID));
     } else if (event.type === "typing.start") {
       const { userID } = event.payload;
-      const username = userMapRef.current[userID]?.Username ?? userID.slice(0, 8);
+      const username = userMapRef.current[userID]?.username ?? userID.slice(0, 8);
       setTypingUsers(prev => ({ ...prev, [userID]: username }));
       if (typingClearTimers.current[userID]) clearTimeout(typingClearTimers.current[userID]);
       typingClearTimers.current[userID] = setTimeout(() => {
@@ -238,12 +241,20 @@ export default function RoomPage() {
   }
 
   return (
-    <section className="relative flex h-[calc(100dvh-8.5rem)] min-h-120 w-full min-w-0 flex-1 overflow-hidden">
+    <section className="relative flex h-[calc(100dvh-8.5rem)] min-h-120 w-full min-w-0 flex-1 gap-3 overflow-hidden">
       <div className="relative flex h-full min-h-0 w-full flex-col rounded-2xl bg-surfaceNavy p-4 shadow-[0_20px_40px_var(--color-panelShadow)] sm:p-5">
-        <header className="flex items-center gap-3 pb-3">
+        <header className="flex items-center justify-between gap-3 pb-3">
           <p className="text-sm font-semibold text-electricPurple">
             #{roomName}
           </p>
+          <button
+            type="button"
+            onClick={() => setMembersOpen(prev => !prev)}
+            aria-label="Toggle members list"
+            className={`rounded-lg p-1.5 transition hover:bg-deepNavy ${membersOpen ? "text-electricPurple" : "text-textMed hover:text-textHigh"}`}
+          >
+            <Users className="h-4 w-4" />
+          </button>
         </header>
 
         <div ref={scrollContainerRef} className="custom-scroll mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
@@ -317,6 +328,75 @@ export default function RoomPage() {
           />
         </footer>
       </div>
+
+      <aside
+        className={`flex shrink-0 flex-col gap-3 overflow-hidden rounded-2xl bg-surfaceNavy shadow-[0_20px_40px_var(--color-panelShadow)] transition-[width,padding] duration-300 ${
+          membersOpen ? "w-56 px-4 py-5" : "w-0 px-0 py-5"
+        }`}
+      >
+        <h3 className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-textMed">
+          Members — {members.length}
+        </h3>
+        <MembersList members={members} />
+      </aside>
     </section>
+  );
+}
+
+function MemberRow({ member }: { member: RoomMember }) {
+  return (
+    <li className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-deepNavy">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-electricPurple/20 text-[10px] font-bold uppercase text-electricPurple">
+        {member.username.slice(0, 2)}
+      </div>
+      <span className="truncate text-sm text-textHigh">{member.username}</span>
+    </li>
+  );
+}
+
+function MembersList({ members }: { members: RoomMember[] }) {
+  // Collect roles that should display as separate groups, preserving first-seen order
+  const roleMap = new Map<string, { name: string; members: RoomMember[] }>();
+  const ungrouped: RoomMember[] = [];
+
+  for (const member of members) {
+    const separateRoles = member.roles?.filter(r => r.display_separately) ?? [];
+    if (separateRoles.length === 0) {
+      ungrouped.push(member);
+    } else {
+      for (const role of separateRoles) {
+        if (!roleMap.has(role.id)) {
+          roleMap.set(role.id, { name: role.name, members: [] });
+        }
+        roleMap.get(role.id)!.members.push(member);
+      }
+    }
+  }
+
+  return (
+    <ul className="custom-scroll flex flex-col gap-3 overflow-y-auto">
+      {Array.from(roleMap.entries()).map(([roleID, group]) => (
+        <li key={roleID}>
+          <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-textMed/70">
+            {group.name} — {group.members.length}
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            {group.members.map(m => <MemberRow key={m.user_id} member={m} />)}
+          </ul>
+        </li>
+      ))}
+      {ungrouped.length > 0 && (
+        <li>
+          {roleMap.size > 0 && (
+            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-textMed/70">
+              Members — {ungrouped.length}
+            </p>
+          )}
+          <ul className="flex flex-col gap-0.5">
+            {ungrouped.map(m => <MemberRow key={m.user_id} member={m} />)}
+          </ul>
+        </li>
+      )}
+    </ul>
   );
 }

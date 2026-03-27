@@ -1,11 +1,18 @@
 'use client'
 
 import { Check, ChevronUp, Eye, Flag, Paperclip, Pencil, SendHorizontal, Shield, Smile, Trash2, UserPlus, X } from 'lucide-react'
-import { useState } from 'react'
+import { memo, useState } from 'react'
+
+export type RoomMemberRole = {
+  id: string
+  name: string
+  display_separately: boolean
+}
 
 export type RoomMember = {
-  UserID: string
-  Username: string
+  user_id: string
+  username: string
+  roles: RoomMemberRole[]
 }
 
 export type Message = {
@@ -34,7 +41,7 @@ export function enrichMessages(
 ): Message[] {
   return raw.map(msg => ({
     ...msg,
-    username: userMap[msg.user_id]?.Username ?? msg.user_id.slice(0, 8),
+    username: userMap[msg.user_id]?.username ?? msg.user_id.slice(0, 8),
   }))
 }
 
@@ -144,7 +151,7 @@ export function LoadMoreButton({
 // ---------------------------------------------------------------------------
 // ChatMessage
 // ---------------------------------------------------------------------------
-export function ChatMessage({
+export const ChatMessage = memo(function ChatMessage({
   message,
   canEdit,
   canDelete,
@@ -305,7 +312,7 @@ export function ChatMessage({
       </div>
     </article>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // TypingIndicator

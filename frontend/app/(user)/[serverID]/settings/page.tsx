@@ -318,6 +318,7 @@ type PermFields = {
   can_mute_members: boolean;
   can_manage_members: boolean;
   can_manage_rooms: boolean;
+  display_separately: boolean;
 };
 
 function RoleRow({
@@ -403,6 +404,16 @@ function RoleRow({
             {label}
           </span>
         ))}
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+            role.display_separately
+              ? "bg-cyan-500/15 text-cyan-400"
+              : "bg-surfaceNavy text-textMed/50"
+          }`}
+        >
+          <Users className="h-3 w-3" />
+          Listed separately
+        </span>
       </div>
     </div>
   );
@@ -428,6 +439,7 @@ function RoleForm({
     can_mute_members: initialPerms?.can_mute_members ?? false,
     can_manage_members: initialPerms?.can_manage_members ?? false,
     can_manage_rooms: initialPerms?.can_manage_rooms ?? false,
+    display_separately: initialPerms?.display_separately ?? false,
   });
 
   const PERM_LABELS: { key: keyof PermFields; label: string; desc: string }[] = [
@@ -469,6 +481,21 @@ function RoleForm({
             </div>
           </label>
         ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-textMed">Display</p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-surfaceNavy">
+          <input
+            type="checkbox"
+            checked={perms.display_separately}
+            onChange={(e) => setPerms((p) => ({ ...p, display_separately: e.target.checked }))}
+            className="mt-0.5 h-4 w-4 accent-electricPurple"
+          />
+          <div>
+            <p className="text-sm font-medium text-textHigh">List separately in members panel</p>
+            <p className="text-xs text-textMed">Members with this role appear as a named group in the room sidebar.</p>
+          </div>
+        </label>
       </div>
       <div className="flex gap-2">
         <button

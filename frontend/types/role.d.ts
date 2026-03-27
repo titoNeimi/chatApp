@@ -7,6 +7,7 @@ export type ServerRole = {
   can_manage_members: boolean
   can_manage_rooms: boolean
   can_send_messages: boolean
+  display_separately: boolean
   created_at: string
   updated_at: string
 }
