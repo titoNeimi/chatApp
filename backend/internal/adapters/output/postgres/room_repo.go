@@ -140,16 +140,72 @@ func (r *RoomRepo) ListMembersByRoom(roomID string) ([]domain.RoomMember, error)
 		return nil, err
 	}
 
-	var members []domain.RoomMember
-	if err := r.db.Model(&models.RoomUsers{}).
-		Joins("JOIN users ON users.id = room_users.user_id").
-		Select("room_users.user_id, users.username").
-		Where("room_users.room_id = ? AND room_users.deleted_at IS NULL", roomID).
-		Scan(&members).Error; err != nil {
+	type row struct {
+		UserID            string `gorm:"column:user_id"`
+		Username          string `gorm:"column:username"`
+		RoleID            string `gorm:"column:role_id"`
+		RoleName          string `gorm:"column:role_name"`
+		RoleServerID      string `gorm:"column:role_server_id"`
+		CanDeleteMessages bool   `gorm:"column:can_delete_messages"`
+		CanMuteMembers    bool   `gorm:"column:can_mute_members"`
+		CanManageMembers  bool   `gorm:"column:can_manage_members"`
+		CanManageRooms    bool   `gorm:"column:can_manage_rooms"`
+		CanSendMessages   bool   `gorm:"column:can_send_messages"`
+		DisplaySeparately bool   `gorm:"column:display_separately"`
+	}
+
+	var rows []row
+	err := r.db.Raw(`
+		SELECT ru.user_id, u.username,
+			sr.id AS role_id, sr.name AS role_name, sr.server_id AS role_server_id,
+			COALESCE(sr.can_delete_messages, false) AS can_delete_messages,
+			COALESCE(sr.can_mute_members, false) AS can_mute_members,
+			COALESCE(sr.can_manage_members, false) AS can_manage_members,
+			COALESCE(sr.can_manage_rooms, false) AS can_manage_rooms,
+			COALESCE(sr.can_send_messages, false) AS can_send_messages,
+			COALESCE(sr.display_separately, false) AS display_separately
+		FROM room_users ru
+		JOIN users u ON u.id = ru.user_id
+		JOIN rooms rm ON rm.id = ru.room_id
+		LEFT JOIN server_user_roles sur ON sur.user_id = ru.user_id AND sur.server_id = rm.server_id
+		LEFT JOIN server_roles sr ON sr.id = sur.role_id
+		WHERE ru.room_id = ? AND ru.deleted_at IS NULL
+	`, roomID).Scan(&rows).Error
+	if err != nil {
 		return nil, err
 	}
 
-	return members, nil
+	memberMap := make(map[string]*domain.RoomMember)
+	memberOrder := make([]string, 0)
+	for _, row := range rows {
+		if _, exists := memberMap[row.UserID]; !exists {
+			memberMap[row.UserID] = &domain.RoomMember{
+				UserID:   row.UserID,
+				Username: row.Username,
+				Roles:    []domain.ServerRole{},
+			}
+			memberOrder = append(memberOrder, row.UserID)
+		}
+		if row.RoleID != "" {
+			memberMap[row.UserID].Roles = append(memberMap[row.UserID].Roles, domain.ServerRole{
+				ID:                row.RoleID,
+				ServerID:          row.RoleServerID,
+				Name:              row.RoleName,
+				CanDeleteMessages: row.CanDeleteMessages,
+				CanMuteMembers:    row.CanMuteMembers,
+				CanManageMembers:  row.CanManageMembers,
+				CanManageRooms:    row.CanManageRooms,
+				CanSendMessages:   row.CanSendMessages,
+				DisplaySeparately: row.DisplaySeparately,
+			})
+		}
+	}
+
+	out := make([]domain.RoomMember, 0, len(memberOrder))
+	for _, uid := range memberOrder {
+		out = append(out, *memberMap[uid])
+	}
+	return out, nil
 }
 
 func (r *RoomRepo) UpdateLastRead(roomID, userID, messageID string) error {

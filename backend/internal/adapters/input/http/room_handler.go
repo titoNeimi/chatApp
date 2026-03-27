@@ -363,7 +363,31 @@ func (h *RoomHandler) ListMembersByRoom(c *echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, roomMembers)
+	type roleDTO struct {
+		ID                string `json:"id"`
+		Name              string `json:"name"`
+		DisplaySeparately bool   `json:"display_separately"`
+	}
+	type memberDTO struct {
+		UserID   string    `json:"user_id"`
+		Username string    `json:"username"`
+		Roles    []roleDTO `json:"roles"`
+	}
+
+	out := make([]memberDTO, 0, len(roomMembers))
+	for _, m := range roomMembers {
+		roles := make([]roleDTO, 0, len(m.Roles))
+		for _, r := range m.Roles {
+			roles = append(roles, roleDTO{
+				ID:                r.ID,
+				Name:              r.Name,
+				DisplaySeparately: r.DisplaySeparately,
+			})
+		}
+		out = append(out, memberDTO{UserID: m.UserID, Username: m.Username, Roles: roles})
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 func (h *RoomHandler) GetMyMembership(c *echo.Context) error {
