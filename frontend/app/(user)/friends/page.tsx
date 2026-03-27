@@ -40,9 +40,8 @@ export default function FriendsPage() {
   }
 
   useEffect(() => {
-    (async () => {
-      await fetchFriends()
-      await fetchPending()
+    void (async () => {
+      await Promise.all([fetchFriends(), fetchPending()])
     })()
   }, [])
 
