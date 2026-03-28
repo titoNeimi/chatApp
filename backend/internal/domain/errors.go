@@ -45,4 +45,5 @@ var (
 	ErrNotBlocked                 = errors.New("user is not blocked")
 	ErrCannotBlockYourself        = errors.New("cannot block yourself")
 	ErrUserIsBlocked              = errors.New("user is blocked")
+	ErrInvalidStatus              = errors.New("invalid status")
 )

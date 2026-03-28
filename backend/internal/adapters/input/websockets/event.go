@@ -11,4 +11,5 @@ const (
 	EventMessageDelete = "message.delete"
 	EventTypingStart   = "typing.start"
 	EventTypingEnd     = "typing.stop"
+	EventPresenceUpdate = "presence.update"
 )

@@ -46,6 +46,7 @@ func ConnectDB() *gorm.DB {
 		{"DirectMessages", &models.DirectMessageChannel{}},
 		{"Friendship", &models.Friendship{}},
 		{"BlockedUser", &models.BlockedUser{}},
+		{"UserStatus", &models.UserStatus{}},
 	}
 
 	for _, m := range migrations {

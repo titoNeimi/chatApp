@@ -52,6 +52,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	dmRepo := postgres.NewDMRepo(db)
 	friendshipRepo := postgres.NewFriendshipRepo(db)
 	blockUserRepo := postgres.NewBlockUserRepo(db)
+	userStatusRepo := postgres.NewUserStatusRepo(db)
 
 	authConfig, err := config.LoadAuthConfigFromEnv()
 	if err != nil {
@@ -72,6 +73,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	dmService := application.NewDmService(dmRepo)
 	friendService := application.NewFriendService(friendshipRepo, blockUserRepo)
 	blockUserService := application.NewBlockUserService(blockUserRepo, friendshipRepo)
+	userStatusService := application.NewUserStatusService(userStatusRepo)
 
 	authMiddleware := middleware.RequireAuth(authService)
 	adminOnly := middleware.RequireRoles(domain.RoleAdmin)
@@ -89,6 +91,7 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	dmHandler := NewDmHandler(dmService)
 	friendHandler := newFriendHandler(friendService)
 	blockUserHandler := newBlockUserHandler(blockUserService)
+	userStatusHandler := newUserStatusHandler(userStatusService)
 
 	e.GET("/ws/room/:roomID", wsHandler.HandleRoom)
 
@@ -96,7 +99,9 @@ func SetUpRouter(e *echo.Echo, db *gorm.DB) {
 	{
 		users.GET("", UserHandler.GetAll, adminOnly)
 		users.GET("/search", UserHandler.SearchByUsername)
+		users.PUT("/me/status", userStatusHandler.SetMyStatus)
 		users.GET("/:userID/servers", serverHandler.ListByUserID, middleware.RequireSelfOrAdmin("userID"))
+		users.GET("/:userID/status", userStatusHandler.GetStatus)
 		users.GET("/:userID", UserHandler.GetByID, middleware.RequireSelfOrAdmin("userID"))
 		users.PUT("/:userID", UserHandler.Update, middleware.RequireSelfOrAdmin("userID"))
 		users.DELETE("/:userID", UserHandler.Delete, middleware.RequireSelfOrAdmin("userID"))
